@@ -482,6 +482,41 @@
     border-radius: 50%;
     flex-shrink: 0;
   }
+
+  /* ── 입력창 X 버튼 ── */
+  .clear-btn {
+    position: absolute;
+    top: 50%; right: 12px;
+    transform: translateY(-50%);
+    background: #c8d8d4;
+    border: none;
+    border-radius: 50%;
+    width: 20px; height: 20px;
+    font-size: 11px;
+    color: #fff;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    padding: 0;
+    z-index: 3;
+    transition: background 0.15s;
+  }
+  .clear-btn:hover { background: #999; }
+  .clear-btn.visible { display: flex; }
+
+  /* 입력창 오른쪽 여백 (X 버튼 공간) */
+  .input-wrap input[type="text"] { padding-right: 40px; }
+
+  /* ── 버튼 비활성화 ── */
+  .main-btn:disabled {
+    background: #c8d8d4 !important;
+    box-shadow: none !important;
+    cursor: not-allowed;
+    transform: none !important;
+    opacity: 0.7;
+  }
 </style>
 </head>
 <body>
@@ -519,8 +554,10 @@
         <span class="input-prefix">📍</span>
         <input id="startInput" type="text"
           placeholder="예: 신경과, CT실"
-          oninput="showSuggestions('start')"
-          autocomplete="off">
+          oninput="showSuggestions('start'); toggleClear('startInput','clearStart')"
+          autocomplete="off"
+          onkeydown="handleStartEnter(event)">
+        <button class="clear-btn" id="clearStart" onclick="clearInput('startInput','clearStart','start')" tabindex="-1">✕</button>
         <div id="startSuggest" class="suggest-box">
           <div class="suggest-header">💡 검색 결과</div>
           <div class="suggest-list" id="startSuggestList"></div>
@@ -545,9 +582,10 @@
         <span class="input-prefix">🏁</span>
         <input id="endInput" type="text"
           placeholder="예: MRI실, 심장내과"
-          oninput="showSuggestions('end')"
+          oninput="showSuggestions('end'); toggleClear('endInput','clearEnd'); updateBtnState()"
           autocomplete="off"
           onkeydown="if(event.key==='Enter') navigateRoute()">
+        <button class="clear-btn" id="clearEnd" onclick="clearInput('endInput','clearEnd','end'); updateBtnState()" tabindex="-1">✕</button>
         <div id="endSuggest" class="suggest-box">
           <div class="suggest-header">💡 검색 결과</div>
           <div class="suggest-list" id="endSuggestList"></div>
@@ -555,7 +593,7 @@
       </div>
     </div>
 
-    <button class="main-btn btn-route" onclick="navigateRoute()">
+    <button id="btnRoute" class="main-btn btn-route" onclick="navigateRoute()" disabled>
       🧭 경로 안내
     </button>
   </div>
@@ -571,9 +609,10 @@
         <span class="input-prefix">🏥</span>
         <input id="searchInput" type="text"
           placeholder="예: 내분비내과, 초음파검사실"
-          oninput="showSuggestions('search')"
+          oninput="showSuggestions('search'); toggleClear('searchInput','clearSearch'); updateSearchBtnState()"
           autocomplete="off"
           onkeydown="if(event.key==='Enter') searchPlace()">
+        <button class="clear-btn" id="clearSearch" onclick="clearInput('searchInput','clearSearch','search'); updateSearchBtnState()" tabindex="-1">✕</button>
         <div id="searchSuggest" class="suggest-box">
           <div class="suggest-header">💡 검색 결과</div>
           <div class="suggest-list" id="searchSuggestList"></div>
@@ -581,7 +620,7 @@
       </div>
     </div>
 
-    <button class="main-btn btn-search" onclick="searchPlace()">
+    <button id="btnSearch" class="main-btn btn-search" onclick="searchPlace()" disabled>
       🔍 위치 표시
     </button>
   </div>
@@ -655,10 +694,10 @@
 <div class="footer-note">
   <p>😊 병원 안내 정보가 도움이 되셨나요?</p>
   <p>수정이 필요하거나 보완할 부분이 있다면<br>
-  언제든지 <a href="mailto:t161930@gnah.co.kr">t161930@gnah.co.kr</a> 로 알려주세요.</p>
+  언제든지 <a href="/cdn-cgi/l/email-protection#52266364636b616212353c333a7c313d7c3920"><span class="__cf_email__" data-cfemail="d0a4e1e6e1e9e3e090b7beb1b8feb3bffebba2">[email&#160;protected]</span></a> 로 알려주세요.</p>
 </div>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 /* ── 지도 이미지 URL ── */
 const maps = {
   '본관 지하1층': 'https://i0.wp.com/i.ibb.co/99nBTF5r/1.png',
@@ -725,9 +764,7 @@ const positions = {
   '입원 전 검사실':           {floor:'본관 3층', top:'70.2%', left:'25.5%'},
   '소화기내과':               {floor:'본관 3층', top:'70.6%', left:'84.1%'},
   '고객상담실':               {floor:'본관 3층', top:'70.2%', left:'92.6%'},
-  '본관 3층 채혈실':               {floor:'본관 3층', top:'58.4%', left:'66.9%'},
-  '본관 3층 수납':               {floor:'본관 3층', top:'79%', left:'67.1%'},
-  
+
   '핵의학과(pet-ct/골밀도)':  {floor:'신관 지하1층', top:'75.7%', left:'42.1%'},
 
   '종합건강진단센터':         {floor:'신관 1층', top:'35.1%', left:'17%'},
@@ -739,8 +776,6 @@ const positions = {
   '심혈관센터 검사실':        {floor:'신관 2층', top:'43.1%', left:'74.2%'},
   '산부인과':                 {floor:'신관 2층', top:'59.9%', left:'72.5%'},
   '내분비내과':               {floor:'신관 2층', top:'65.5%', left:'55.9%'},
-  '신관 2층 채혈실':               {floor:'신관 2층', top:'37%', left:'10.5%'},
-  '신관 2층 수납':               {floor:'신관 2층', top:'48.2%', left:'10.9%'},
 
   '이비인후과':               {floor:'신관 3층', top:'39.1%', left:'35.7%'},
   '비뇨의학과':               {floor:'신관 3층', top:'37.8%', left:'55.4%'},
@@ -749,7 +784,6 @@ const positions = {
   '성형외과':                 {floor:'신관 3층', top:'50.6%', left:'83.4%'},
   '치과':                     {floor:'신관 3층', top:'57.7%', left:'74.2%'},
   '정신건강의학과':           {floor:'신관 3층', top:'72.9%', left:'59.8%'},
-  '신관 3층 수납':               {floor:'신관 3층', top:'87.5%', left:'49.4%'},
   '진료협력센터':             {floor:'신관 3층', top:'79%',   left:'34.3%'}
 };
 
@@ -795,6 +829,14 @@ const resultChip      = document.getElementById('resultChip');
 const chipTitle       = document.getElementById('chipTitle');
 const chipBody        = document.getElementById('chipBody');
 const legendBox       = document.getElementById('legendBox');
+
+/* ── 출발지 엔터 → 도착지 포커스 ── */
+function handleStartEnter(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    document.getElementById('endInput').focus();
+  }
+}
 
 /* ── 탭 전환 ── */
 function switchTab(tab) {
@@ -930,6 +972,45 @@ function triggerFadeIn(el) {
   el.classList.add('fade-in');
 }
 
+
+/* ── X 버튼 토글 ── */
+function toggleClear(inputId, btnId) {
+  const inp = document.getElementById(inputId);
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  inp.value.trim() ? btn.classList.add('visible') : btn.classList.remove('visible');
+}
+
+function clearInput(inputId, btnId, suggestType) {
+  const inp = document.getElementById(inputId);
+  inp.value = '';
+  toggleClear(inputId, btnId);
+  showSuggestions(suggestType);
+  inp.focus();
+}
+
+/* ── 버튼 비활성화 ── */
+function updateBtnState() {
+  const btn = document.getElementById('btnRoute');
+  if (!btn) return;
+  btn.disabled = !endInput.value.trim();
+}
+
+function updateSearchBtnState() {
+  const btn = document.getElementById('btnSearch');
+  if (!btn) return;
+  btn.disabled = !searchInput.value.trim();
+}
+
+/* ── 자동 스크롤 ── */
+function scrollToResult() {
+  const target = document.getElementById('resultChip');
+  if (!target) return;
+  setTimeout(() => {
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 120);
+}
+
 /* ── 결과 표시 공통 ── */
 function showResult(titleText, bodyText, isOrange) {
   chipTitle.textContent = titleText;
@@ -937,6 +1018,7 @@ function showResult(titleText, bodyText, isOrange) {
   resultChip.className  = 'result-chip' + (isOrange ? ' orange-accent' : '') + ' fade-in';
   resultChip.style.display = 'block';
   triggerFadeIn(resultChip);
+  scrollToResult();
 }
 
 /* ── 빠른 위치 찾기 ── */
@@ -1087,4 +1169,3 @@ function handleAdminClick(e) {
 </script>
 </body>
 </html>
-
