@@ -3,9 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v14</title>
+<title>강릉아산병원 안내지도 v15</title>
 
-<!-- 핵심 층 미리 로드 (속도 개선) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- 핵심 층 미리 로드 -->
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/SwCtCF4c/2.png">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/nqZHRSS8/3.png">
@@ -13,379 +16,650 @@
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/MxkY0q1f/3.png">
 
 <style>
-  body{
-    font-family:'Pretendard',sans-serif;
-    text-align:center;
-    background:#fafafa;
-    color:#333;
-    padding:32px 16px 80px;
-  }
-  h1{
-    color:#009688;
-    font-weight:600;
-    font-size:24px;
-    margin-bottom:6px;
-  }
-  .subtitle{
-    color:#555;
-    font-size:15px;
-    margin-bottom:24px;
+  :root {
+    --mint:    #009688;
+    --mint-light: #e0f2f1;
+    --mint-mid: #4db6ac;
+    --orange:  #ff8c42;
+    --orange-light: #fff3eb;
+    --orange-mid: #ffb380;
+    --bg:      #f5f7f6;
+    --card:    #ffffff;
+    --text:    #2c3e35;
+    --text-sub:#6b7c74;
+    --border:  #dde8e5;
+    --shadow:  0 4px 20px rgba(0,150,136,0.10);
+    --radius:  14px;
   }
 
-  .search-area{
-    max-width:700px;
-    width:100%;
-    margin:0 auto 24px auto;
-    text-align:left;
-    background:#fff;
-    border-radius:16px;
-    box-shadow:0 4px 14px rgba(0,0,0,0.06);
-    border:1px solid #ddd;
-    padding:20px 24px;
-    position:relative;
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 32px 16px 80px;
+    min-height: 100vh;
   }
 
-  .field-label{
-    font-size:14px;
-    font-weight:500;
-    color:#444;
-    margin-bottom:6px;
-    display:block;
+  /* ── 헤더 ── */
+  .header {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .header-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .header-icon {
+    width: 38px; height: 38px;
+    background: var(--mint);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  h1 {
+    color: var(--mint);
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: -0.3px;
+  }
+  .subtitle {
+    color: var(--text-sub);
+    font-size: 13.5px;
+    margin-top: 2px;
   }
 
-  .input-wrap{
-    position:relative;
-    width:100%;
-    margin-bottom:16px;
+  /* ── 카드 ── */
+  .card {
+    max-width: 700px;
+    width: 100%;
+    margin: 0 auto 28px auto;
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    overflow: visible;
   }
 
-  input[type="text"]{
-    width:100%;
-    padding:14px;
-    border:1px solid #ccc;
-    border-radius:10px;
-    font-size:16px;
-    box-sizing:border-box;
+  /* ── 탭 ── */
+  .tab-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab-btn {
+    padding: 14px 0;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Noto Sans KR', sans-serif;
+    border: none;
+    background: transparent;
+    color: var(--text-sub);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-bottom: 3px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+    position: relative;
+    top: 1px;
+  }
+  .tab-btn.active {
+    color: var(--mint);
+    border-bottom: 3px solid var(--mint);
+  }
+  .tab-btn:first-child { border-radius: var(--radius) 0 0 0; }
+  .tab-btn:last-child  { border-radius: 0 var(--radius) 0 0; }
+
+  /* ── 탭 패널 ── */
+  .tab-panel {
+    display: none;
+    padding: 22px 20px 20px;
+  }
+  .tab-panel.active { display: block; }
+
+  /* ── 라벨 + 입력 ── */
+  .field-group { margin-bottom: 16px; }
+  .field-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-sub);
+    margin-bottom: 7px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .field-label .lbl-icon {
+    width: 22px; height: 22px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+  }
+  .lbl-icon.start-icon { background: #e8f5e9; }
+  .lbl-icon.end-icon   { background: var(--orange-light); }
+  .lbl-icon.search-icon{ background: var(--mint-light); }
+
+  /* 입력 래퍼 (아이콘 + input) */
+  .input-wrap {
+    position: relative;
+    width: 100%;
+  }
+  .input-prefix {
+    position: absolute;
+    top: 50%; left: 14px;
+    transform: translateY(-50%);
+    font-size: 16px;
+    pointer-events: none;
+    z-index: 2;
+  }
+  input[type="text"] {
+    width: 100%;
+    padding: 13px 14px 13px 42px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-size: 15px;
+    font-family: 'Noto Sans KR', sans-serif;
+    color: var(--text);
+    background: #fafcfb;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    outline: none;
+  }
+  input[type="text"]:focus {
+    border-color: var(--mint);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(0,150,136,0.12);
   }
 
-  button.main-btn{
-    width:100%;
-    padding:12px 30px;
-    background:#ff8c42;
-    color:#fff;
-    border:none;
-    border-radius:10px;
-    font-size:16px;
-    font-weight:600;
-    cursor:pointer;
-    transition:0.3s;
+  /* 경로 화살표 구분선 */
+  .route-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 0 16px;
+    color: var(--text-sub);
+    font-size: 13px;
   }
-  button.main-btn:hover{
-    transform:scale(1.05);
-    background:#ff9e63;
+  .route-divider-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
   }
-
-  .section-title{
-    font-size:16px;
-    font-weight:600;
-    margin-top:12px;
-    margin-bottom:6px;
-    color:#444;
+  .route-arrow {
+    width: 28px; height: 28px;
+    background: var(--mint-light);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
   }
 
-  /* 추천 자동완성 박스 */
-  .suggest-box{
-    display:none;
-    position:absolute;
-    left:0;
-    right:0;
-    top:100%;
-    margin-top:6px;
-    background:#fff7f2;
-    border:1px solid #ff9e63;
-    border-radius:12px;
-    box-shadow:0 4px 12px rgba(255,140,66,0.35);
-    padding:12px 14px;
-    z-index:50;
+  /* ── 버튼 ── */
+  .main-btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: 'Noto Sans KR', sans-serif;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+    letter-spacing: -0.2px;
   }
-  .suggest-header{
-    font-size:13px;
-    font-weight:600;
-    color:#ff8c42;
-    margin-bottom:8px;
-    display:flex;
-    align-items:center;
-    gap:4px;
+  .btn-route {
+    background: var(--orange);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(255,140,66,0.30);
   }
-  .suggest-list{
-    max-height:200px;
-    overflow-y:auto;
+  .btn-route:hover  { background: #e67a30; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(255,140,66,0.35); }
+  .btn-route:active { transform: translateY(0); box-shadow: none; }
+
+  .btn-search {
+    background: var(--orange);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(255,140,66,0.30);
   }
-  .suggest-item{
-    font-size:14px;
-    line-height:1.4;
-    color:#444;
-    background:#ffffff00;
-    border-radius:8px;
-    padding:8px 10px;
-    cursor:pointer;
+  .btn-search:hover  { background: #e67a30; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(255,140,66,0.35); }
+  .btn-search:active { transform: translateY(0); box-shadow: none; }
+
+  /* ── 자동완성 ── */
+  .suggest-box {
+    display: none;
+    position: absolute;
+    left: 0; right: 0;
+    top: calc(100% + 6px);
+    background: #fff;
+    border: 1.5px solid var(--mint-mid);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,150,136,0.15);
+    padding: 8px;
+    z-index: 100;
   }
-  .suggest-item b{
-    color:#000;
-    font-weight:600;
+  .suggest-header {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--mint);
+    padding: 4px 8px 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
-  .suggest-item small{
-    color:#666;
-    font-size:12px;
-    display:block;
-    margin-top:2px;
+  .suggest-list { max-height: 200px; overflow-y: auto; }
+  .suggest-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
   }
-  .suggest-item:hover{
-    background:#ffb580;
-    color:#000;
+  .suggest-item:hover { background: var(--mint-light); }
+  .suggest-item b { font-size: 14px; color: var(--text); font-weight: 600; }
+  .suggest-item .suggest-floor {
+    font-size: 11.5px;
+    color: var(--mint);
+    background: var(--mint-light);
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 500;
+    white-space: nowrap;
   }
 
-  /* 지도 컨테이너 */
-  #mapsContainer{
-    max-width:1200px;
-    width:100%;
-    margin:32px auto 0 auto;
-    display:none;
+  /* ── 결과 영역 fade-in ── */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .fade-in {
+    animation: fadeInUp 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
   }
 
-  .map-block{
-    margin-bottom:32px;
-  }
-  .map-heading{
-    font-size:17px;
-    font-weight:600;
-    margin-bottom:10px;
-  }
-  .map-heading.current{
-    color:#009688;
-  }
-  .map-heading.dest{
-    color:#ff8c42;
+  #mapsContainer {
+    max-width: 700px;
+    width: 100%;
+    margin: 0 auto;
+    display: none;
   }
 
-  .map-wrapper{
-    position:relative;
-    display:inline-block;
-    width:100%;
-    max-width:1200px;
+  /* 결과 메시지 칩 */
+  .result-chip {
+    display: none;
+    max-width: 700px;
+    margin: 0 auto 18px auto;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--mint);
+    border-radius: 10px;
+    padding: 14px 16px;
+    box-shadow: var(--shadow);
   }
-  .floor-map{
-    width:100%;
-    height:auto;
-    border-radius:12px;
-    box-shadow:0 3px 10px rgba(0,0,0,0.3);
-    cursor:pointer;
-    display:block;
+  .result-chip.orange-accent { border-left-color: var(--orange); }
+  .result-chip .chip-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--mint);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
+  .result-chip.orange-accent .chip-title { color: var(--orange); }
+  .result-chip .chip-body {
+    font-size: 13.5px;
+    color: var(--text-sub);
+    line-height: 1.6;
+    white-space: pre-line;
+  }
+
+  /* 지도 블록 */
+  .map-block { margin-bottom: 24px; }
+  .map-heading {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    width: fit-content;
+  }
+  .map-heading.current { color: #2e7d32; background: #e8f5e9; }
+  .map-heading.dest    { color: #e65100; background: var(--orange-light); }
+
+  .map-wrapper {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.14);
+  }
+  .floor-map {
+    width: 100%;
+    height: auto;
+    display: block;
+    cursor: zoom-in;
+    transition: transform 0.2s;
+  }
+  .floor-map:hover { transform: scale(1.005); }
 
   /* 마커 */
-  @keyframes blink {
-    0%{opacity:1;}
-    50%{opacity:0.4;}
-    100%{opacity:1;}
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0   rgba(255,140,66,0.5); }
+    70%  { box-shadow: 0 0 0 12px rgba(255,140,66,0); }
+    100% { box-shadow: 0 0 0 0   rgba(255,140,66,0); }
   }
-  .marker{
-    position:absolute;
-    border-radius:50%;
-    animation:blink 1s infinite;
-    z-index:10;
+  @keyframes pulseGreen {
+    0%   { box-shadow: 0 0 0 0   rgba(76,175,80,0.5); }
+    70%  { box-shadow: 0 0 0 12px rgba(76,175,80,0); }
+    100% { box-shadow: 0 0 0 0   rgba(76,175,80,0); }
   }
-  .marker.start{
-    width:22px;
-    height:22px;
-    background:#4caf50;
-    box-shadow:0 0 0 6px rgba(76,175,80,0.2);
+  @keyframes pulseCopper {
+    0%   { box-shadow: 0 0 0 0   rgba(184,115,51,0.5); }
+    70%  { box-shadow: 0 0 0 10px rgba(184,115,51,0); }
+    100% { box-shadow: 0 0 0 0   rgba(184,115,51,0); }
   }
-  .marker.end{
-    width:26px;
-    height:26px;
-    background:#ff8c42;
-    box-shadow:0 0 0 6px rgba(255,140,66,0.2);
+  .marker {
+    position: absolute;
+    border-radius: 50%;
+    z-index: 10;
+    transform: translate(-50%,-50%);
   }
-  .marker.elevator{
-    width:22px;
-    height:22px;
-    background:#b87333; /* 구리색 */
-    box-shadow:0 0 0 6px rgba(184,115,51,0.25);
-  }
-
-  #message{
-    white-space:pre-line;
-    margin-top:16px;
-    font-size:15px;
-    line-height:1.5;
-    color:#666;
-  }
+  .marker.start    { width:22px;height:22px;background:#4caf50;animation:pulseGreen 1.4s infinite; }
+  .marker.end      { width:26px;height:26px;background:var(--orange);animation:pulse 1.4s infinite; }
+  .marker.elevator { width:20px;height:20px;background:#b87333;animation:pulseCopper 1.4s infinite; }
 
   /* 확대 팝업 */
-  #imagePopup{
-    display:none;
-    position:fixed;
-    top:0;left:0;
-    width:100%;height:100%;
-    background:rgba(0,0,0,.8);
-    justify-content:center;
-    align-items:center;
-    z-index:1000;
+  #imagePopup {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.88);
+    justify-content: center;
+    align-items: center;
+    z-index: 5000;
+    backdrop-filter: blur(4px);
   }
-  #popupInner{
-    position:relative;
-    max-width:95%;
-    max-height:95%;
+  #popupInner {
+    position: relative;
+    max-width: 95%;
+    max-height: 95%;
   }
-  #popupClose{
-    position:absolute;
-    top:-44px;
-    right:-10px;
-    background:#ff8c42;
-    border:none;
-    color:#fff;
-    font-size:22px;
-    padding:8px 14px;
-    border-radius:8px;
-    cursor:pointer;
+  #popupClose {
+    position: absolute;
+    top: -44px; right: -10px;
+    background: var(--orange);
+    border: none;
+    color: #fff;
+    font-size: 20px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-weight: 700;
   }
-  #popupImg{
-    max-width:100%;
-    max-height:90vh;
-    border-radius:12px;
-    box-shadow:0 5px 15px rgba(0,0,0,0.4);
-  }
+  #popupImgWrap { position: relative; }
+  #popupImg { max-width:100%;max-height:90vh;border-radius:12px;display:block; }
+  #popupMarker { display:none;position:absolute;border-radius:50%;background:var(--orange);
+    width:26px;height:26px;transform:translate(-50%,-50%);animation:pulse 1.4s infinite;z-index:5010; }
 
-  /* 로딩 오버레이 */
-  #loadingOverlay{
-    position:fixed;
-    top:0;left:0;
-    width:100%;
-    height:100%;
-    background:rgba(0,0,0,0.6);
-    color:#fff;
-    display:none;
-    align-items:center;
-    justify-content:center;
-    text-align:center;
-    z-index:2000;
-    font-size:16px;
-    line-height:1.5;
-    padding:20px;
+  /* 로딩 */
+  #loadingOverlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9000;
+    backdrop-filter: blur(3px);
   }
-  #loadingBox{
-    background:rgba(0,0,0,0.75);
-    border-radius:12px;
-    padding:20px 24px;
-    max-width:260px;
-    box-shadow:0 6px 16px rgba(0,0,0,0.5);
-    border:1px solid rgba(255,255,255,0.2);
+  #loadingBox {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 24px 28px;
+    text-align: center;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
   }
-  #loadingBox p{
-    color:#fff;
-    margin:0;
-    font-weight:500;
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--mint-light);
+    border-top-color: var(--mint);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loadingBox p { font-size: 14px; color: var(--text-sub); font-weight: 500; }
+
+  /* 하단 안내 */
+  .footer-note {
+    text-align: center;
+    padding: 28px 20px 0;
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--text-sub);
+    max-width: 700px;
+    margin: 0 auto;
+  }
+  .footer-note a { color: var(--mint); text-decoration: none; font-weight: 600; }
+
+  /* 범례 */
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 0 auto 20px;
+    max-width: 700px;
+    padding: 0 4px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: var(--text-sub);
+    font-weight: 500;
+  }
+  .legend-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
   }
 </style>
 </head>
 <body>
 
-<h1>강릉아산병원</h1>
-<p class="subtitle">찾고 싶은 진료과/검사실을 입력해주세요. 🏥</p>
+<!-- 헤더 -->
+<div class="header">
+  <div class="header-logo">
+    <h1>강릉아산병원</h1>
+  </div>
+  <p class="subtitle">진료과 · 검사실 위치를 안내해 드립니다</p>
+</div>
 
-<!-- 검색 영역 -->
-<div class="search-area">
-  <!-- 출발지 -->
-  <span class="field-label">출발지</span>
-  <div class="input-wrap">
-    <input id="startInput" type="text"
-      placeholder="예: 신경과, CT실"
-      oninput="showSuggestions('start')">
-    <div id="startSuggest" class="suggest-box">
-      <div class="suggest-header">💡 혹시 이런 곳 찾으셨나요?</div>
-      <div class="suggest-list" id="startSuggestList"></div>
-    </div>
+<!-- 검색 카드 -->
+<div class="card">
+  <!-- 탭 바 -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('route')">
+      🧭 경로 안내
+    </button>
+    <button class="tab-btn" onclick="switchTab('quick')">
+      🔍 빠른 위치 찾기
+    </button>
   </div>
 
-  <!-- 도착지 -->
-  <span class="field-label" style="margin-top:8px;display:block;">도착지</span>
-  <div class="input-wrap">
-    <input id="endInput" type="text"
-      placeholder="예: MRI실, 심장내과"
-      oninput="showSuggestions('end')">
-    <div id="endSuggest" class="suggest-box">
-      <div class="suggest-header">💡 혹시 이런 곳 찾으셨나요?</div>
-      <div class="suggest-list" id="endSuggestList"></div>
+  <!-- 탭 1 : 경로 안내 -->
+  <div class="tab-panel active" id="panelRoute">
+
+    <!-- 출발지 -->
+    <div class="field-group">
+      <label class="field-label">
+        <span class="lbl-icon start-icon">🟢</span>
+        출발지
+      </label>
+      <div class="input-wrap">
+        <span class="input-prefix">📍</span>
+        <input id="startInput" type="text"
+          placeholder="예: 신경과, CT실"
+          oninput="showSuggestions('start')"
+          autocomplete="off">
+        <div id="startSuggest" class="suggest-box">
+          <div class="suggest-header">💡 검색 결과</div>
+          <div class="suggest-list" id="startSuggestList"></div>
+        </div>
+      </div>
     </div>
+
+    <!-- 화살표 구분선 -->
+    <div class="route-divider">
+      <div class="route-divider-line"></div>
+      <div class="route-arrow">↓</div>
+      <div class="route-divider-line"></div>
+    </div>
+
+    <!-- 도착지 -->
+    <div class="field-group">
+      <label class="field-label">
+        <span class="lbl-icon end-icon">🟠</span>
+        도착지
+      </label>
+      <div class="input-wrap">
+        <span class="input-prefix">🏁</span>
+        <input id="endInput" type="text"
+          placeholder="예: MRI실, 심장내과"
+          oninput="showSuggestions('end')"
+          autocomplete="off"
+          onkeydown="if(event.key==='Enter') navigateRoute()">
+        <div id="endSuggest" class="suggest-box">
+          <div class="suggest-header">💡 검색 결과</div>
+          <div class="suggest-list" id="endSuggestList"></div>
+        </div>
+      </div>
+    </div>
+
+    <button class="main-btn btn-route" onclick="navigateRoute()">
+      🧭 경로 안내
+    </button>
   </div>
 
-  <button class="main-btn" style="margin-top:10px;" onclick="navigateRoute()">🧭 경로 안내</button>
-
-  <div class="section-title" style="margin-top:20px;">빠른 위치 찾기 (도착지만 보고 싶을 때)</div>
-  <div class="input-wrap">
-    <input id="searchInput" type="text"
-      placeholder="예: 내분비내과, 초음파검사실"
-      oninput="showSuggestions('search')"
-      onkeydown="if(event.key==='Enter') searchPlace();">
-    <div id="searchSuggest" class="suggest-box">
-      <div class="suggest-header">💡 혹시 이런 곳 찾으셨나요?</div>
-      <div class="suggest-list" id="searchSuggestList"></div>
+  <!-- 탭 2 : 빠른 위치 찾기 -->
+  <div class="tab-panel" id="panelQuick">
+    <div class="field-group">
+      <label class="field-label">
+        <span class="lbl-icon search-icon">🔍</span>
+        찾을 장소
+      </label>
+      <div class="input-wrap">
+        <span class="input-prefix">🏥</span>
+        <input id="searchInput" type="text"
+          placeholder="예: 내분비내과, 초음파검사실"
+          oninput="showSuggestions('search')"
+          autocomplete="off"
+          onkeydown="if(event.key==='Enter') searchPlace()">
+        <div id="searchSuggest" class="suggest-box">
+          <div class="suggest-header">💡 검색 결과</div>
+          <div class="suggest-list" id="searchSuggestList"></div>
+        </div>
+      </div>
     </div>
+
+    <button class="main-btn btn-search" onclick="searchPlace()">
+      🔍 위치 표시
+    </button>
   </div>
-  <button class="main-btn" onclick="searchPlace()">🔍 위치 표시</button>
+</div>
+
+<!-- 결과 메시지 칩 -->
+<div id="resultChip" class="result-chip">
+  <div class="chip-title" id="chipTitle">📍 위치 안내</div>
+  <div class="chip-body" id="chipBody"></div>
+</div>
+
+<!-- 범례 (결과 표시 시 함께 노출) -->
+<div id="legendBox" class="legend" style="display:none;">
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#4caf50;"></div>출발지
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:var(--orange);"></div>도착지
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#b87333;"></div>엘리베이터
+  </div>
 </div>
 
 <!-- 지도 영역 -->
 <div id="mapsContainer">
   <div id="currentBlock" class="map-block">
-    <div class="map-heading current">현재 위치 (출발층)</div>
+    <div class="map-heading current">🟢 현재 위치 (출발층)</div>
     <div id="mapCurrent" class="map-wrapper">
-      <img id="mapImageCurrent" class="floor-map" src="" alt="출발층 지도" loading="lazy" onclick="openImagePopup(this.src)">
+      <img id="mapImageCurrent" class="floor-map" src="" alt="출발층 지도"
+        loading="lazy" onclick="openImagePopup(this.src, 'start')">
     </div>
   </div>
 
   <div id="destBlock" class="map-block">
-    <div class="map-heading dest">도착 위치 (도착층)</div>
+    <div class="map-heading dest">🟠 도착 위치 (도착층)</div>
     <div id="mapDestination" class="map-wrapper">
-      <img id="mapImageDestination" class="floor-map" src="" alt="도착층 지도" loading="lazy" onclick="openImagePopup(this.src)">
+      <img id="mapImageDestination" class="floor-map" src="" alt="도착층 지도"
+        loading="lazy" onclick="openImagePopup(this.src, 'end')">
     </div>
   </div>
 </div>
-
-<p id="message"></p>
 
 <!-- 확대 팝업 -->
-<div id="imagePopup" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
- background:rgba(0,0,0,0.85); z-index:5000; align-items:center; justify-content:center;">
-
+<div id="imagePopup" style="display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.88); z-index:5000; align-items:center; justify-content:center;
+  backdrop-filter:blur(4px);">
   <div id="popupInner" style="position:relative; max-width:95%; max-height:95%;">
     <button id="popupClose" onclick="closeImagePopup()"
-      style="position:absolute; top:-44px; right:-10px; background:#ff8c42; border:none;
-      color:#fff; font-size:22px; padding:8px 14px; border-radius:8px; cursor:pointer;">
-      ✕
-    </button>
-
-    <!-- 지도 이미지 + 마커 같이 표시 -->
-    <div id="popupImgWrap" style="position:relative; max-width:100%; max-height:90vh;">
-      <img id="popupImg" src="" style="max-width:100%; max-height:90vh; border-radius:12px; box-shadow:0 5px 15px rgba(0,0,0,0.4);">
-      <div id="popupMarker" class="marker end"
-        style="display:none; position:absolute; width:26px; height:26px; border-radius:50%;
-        background:#ff8c42; box-shadow:0 0 0 6px rgba(255,140,66,0.2);
-        animation:blink 1s infinite; z-index:5010;"></div>
+      style="position:absolute; top:-44px; right:-10px; background:var(--orange);
+      border:none; color:#fff; font-size:20px; padding:8px 14px; border-radius:8px;
+      cursor:pointer; font-family:'Noto Sans KR',sans-serif; font-weight:700;">✕ 닫기</button>
+    <div id="popupImgWrap" style="position:relative; max-width:100%;">
+      <img id="popupImg" src="" style="max-width:100%; max-height:90vh; border-radius:12px; display:block;">
+      <div id="popupMarker" style="display:none; position:absolute; border-radius:50%;
+        background:var(--orange); width:26px; height:26px; transform:translate(-50%,-50%);
+        animation:pulse 1.4s infinite; z-index:5010;"></div>
     </div>
   </div>
 </div>
 
-<!-- 로딩 오버레이 -->
+<!-- 로딩 -->
 <div id="loadingOverlay">
   <div id="loadingBox">
-    <p>지도가 로딩 중입니다.<br>조금만 기다려주세요 🙇</p>
+    <div class="spinner"></div>
+    <p>지도를 불러오는 중입니다…</p>
   </div>
+</div>
+
+<!-- 하단 안내 -->
+<div class="footer-note">
+  <p>😊 병원 안내 정보가 도움이 되셨나요?</p>
+  <p>수정이 필요하거나 보완할 부분이 있다면<br>
+  언제든지 <a href="mailto:t161930@gnah.co.kr">t161930@gnah.co.kr</a> 로 알려주세요.</p>
 </div>
 
 <script>
-/* ---- 지도 이미지 URL (i0.wp.com 프록시로 빠르게) ---- */
+/* ── 지도 이미지 URL ── */
 const maps = {
   '본관 지하1층': 'https://i0.wp.com/i.ibb.co/99nBTF5r/1.png',
   '본관 2층':     'https://i0.wp.com/i.ibb.co/SwCtCF4c/2.png',
@@ -396,7 +670,7 @@ const maps = {
   '신관 3층':     'https://i0.wp.com/i.ibb.co/MxkY0q1f/3.png'
 };
 
-/* ---- 엘리베이터 좌표 ---- */
+/* ── 엘리베이터 좌표 ── */
 const elevators = {
   '본관 지하1층': {top:'65.2%', left:'46.4%'},
   '본관 2층':     {top:'32%',   left:'45.5%'},
@@ -407,70 +681,63 @@ const elevators = {
   '신관 3층':     {top:'65.8%', left:'36%'}
 };
 
-/* ---- 전체 위치 좌표 ---- */
+/* ── 전체 위치 좌표 ── */
 const positions = {
-  // 본관 지하 1층
-  '방사선종양학과': {floor:'본관 지하1층', top:'30.6%', left:'25.3%'},
+  '방사선종양학과':           {floor:'본관 지하1층', top:'30.6%', left:'25.3%'},
 
-  // 본관 2층
-  '소화기병센터':          {floor:'본관 2층', top:'27.9%', left:'10%'},
-  '초음파검사실':          {floor:'본관 2층', top:'12%', left:'50.1%'},
-  '소아진정실':            {floor:'본관 2층', top:'21.9%', left:'28.7%'},
-  '핵의학과(감마영상실)':  {floor:'본관 2층', top:'17.8%', left:'55.9%'},
-  '재활의학과(본관2층)':   {floor:'본관 2층', top:'20.5%', left:'86.8%'},
-  '혈관조영실':            {floor:'본관 2층', top:'43.8%', left:'17.3%'},
-  '뇌신경검사실':          {floor:'본관 2층', top:'41.8%', left:'6.3%'},
-  'ct실':                  {floor:'본관 2층', top:'47.2%', left:'38.4%'},
-  'mri실':                 {floor:'본관 2층', top:'47.2%', left:'38.4%'},
-  '대기실':                {floor:'본관 2층', top:'47.9%', left:'46.9%'},
-  '영상의학과 접수':       {floor:'본관 2층', top:'44.5%', left:'60.1%'},
-  '일반촬영실':            {floor:'본관 2층', top:'56.4%', left:'69.1%'},
-  '투시촬영실':            {floor:'본관 2층', top:'44.2%', left:'70.8%'},
-  'ct3':                   {floor:'본관 2층', top:'70.9%', left:'71.3%'},
-  '항암 낮병동':           {floor:'본관 2층', top:'86.8%', left:'68.3%'},
-  '다학제 진료실':         {floor:'본관 2층', top:'79.7%', left:'46.9%'},
+  '소화기병센터':             {floor:'본관 2층', top:'27.9%', left:'10%'},
+  '초음파검사실':             {floor:'본관 2층', top:'12%',   left:'50.1%'},
+  '소아진정실':               {floor:'본관 2층', top:'21.9%', left:'28.7%'},
+  '핵의학과(감마영상실)':     {floor:'본관 2층', top:'17.8%', left:'55.9%'},
+  '재활의학과(본관2층)':      {floor:'본관 2층', top:'20.5%', left:'86.8%'},
+  '혈관조영실':               {floor:'본관 2층', top:'43.8%', left:'17.3%'},
+  '뇌신경검사실':             {floor:'본관 2층', top:'41.8%', left:'6.3%'},
+  'ct실':                     {floor:'본관 2층', top:'47.2%', left:'38.4%'},
+  'mri실':                    {floor:'본관 2층', top:'47.2%', left:'38.4%'},
+  '대기실':                   {floor:'본관 2층', top:'47.9%', left:'46.9%'},
+  '영상의학과 접수':          {floor:'본관 2층', top:'44.5%', left:'60.1%'},
+  '일반촬영실':               {floor:'본관 2층', top:'56.4%', left:'69.1%'},
+  '투시촬영실':               {floor:'본관 2층', top:'44.2%', left:'70.8%'},
+  'ct3':                      {floor:'본관 2층', top:'70.9%', left:'71.3%'},
+  '항암 낮병동':              {floor:'본관 2층', top:'86.8%', left:'68.3%'},
+  '다학제 진료실':            {floor:'본관 2층', top:'79.7%', left:'46.9%'},
 
-  // 본관 3층
-  '호흡기내과':                {floor:'본관 3층', top:'30.6%', left:'16.5%'},
-  '재활의학과':                {floor:'본관 3층', top:'20.5%', left:'20.7%'},
-  '가정의학과':                {floor:'본관 3층', top:'21.5%', left:'30.4%'},
-  '정형외과':                  {floor:'본관 3층', top:'18.8%', left:'46.2%'},
-  '외과':                      {floor:'본관 3층', top:'18.8%', left:'68.6%'},
-  '신장내과':                  {floor:'본관 3층', top:'13.7%', left:'82.2%'},
+  '호흡기내과':               {floor:'본관 3층', top:'30.6%', left:'16.5%'},
+  '재활의학과':               {floor:'본관 3층', top:'20.5%', left:'20.7%'},
+  '가정의학과':               {floor:'본관 3층', top:'21.5%', left:'30.4%'},
+  '정형외과':                 {floor:'본관 3층', top:'18.8%', left:'46.2%'},
+  '외과':                     {floor:'본관 3층', top:'18.8%', left:'68.6%'},
+  '신장내과':                 {floor:'본관 3층', top:'13.7%', left:'82.2%'},
   '류마티스 내과':            {floor:'본관 3층', top:'30.3%', left:'82.9%'},
-  '신경과':                    {floor:'본관 3층', top:'41.5%', left:'84.4%'},
-  '신경외과':                  {floor:'본관 3층', top:'31.3%', left:'75.9%'},
-  '다학제통합진료':            {floor:'본관 3층', top:'41.1%', left:'76.1%'},
-  '특수주사실':                {floor:'본관 3층', top:'35.4%', left:'63.5%'},
-  '척추센터외래':              {floor:'본관 3층', top:'34%', left:'52.3%'},
-  '주사실':                    {floor:'본관 3층', top:'33.7%', left:'40.9%'},
-  '혈액종양내과':              {floor:'본관 3층', top:'33%', left:'30.6%'},
-  '암센터 상담실':             {floor:'본관 3층', top:'43.2%', left:'30.4%'},
-  '의무기록영상발급':          {floor:'본관 3층', top:'46.5%', left:'23.6%'},
-  '호흡기. 알레르기 검사실':  {floor:'본관 3층', top:'42.5%', left:'15.3%'},
-  '알레르기 감염내과':         {floor:'본관 3층', top:'57%', left:'11.7%'},
-  '통증클리닉':                {floor:'본관 3층', top:'69.6%', left:'7.1%'},
-  '소아청소년과':              {floor:'본관 3층', top:'71.2%', left:'17.5%'},
-  '입원 전 검사실':            {floor:'본관 3층', top:'70.2%', left:'25.5%'},
-  '소화기내과':                {floor:'본관 3층', top:'70.6%', left:'84.1%'},
-  '고객상담실':                {floor:'본관 3층', top:'70.2%', left:'92.6%'},
+  '신경과':                   {floor:'본관 3층', top:'41.5%', left:'84.4%'},
+  '신경외과':                 {floor:'본관 3층', top:'31.3%', left:'75.9%'},
+  '다학제통합진료':           {floor:'본관 3층', top:'41.1%', left:'76.1%'},
+  '특수주사실':               {floor:'본관 3층', top:'35.4%', left:'63.5%'},
+  '척추센터외래':             {floor:'본관 3층', top:'34%',   left:'52.3%'},
+  '주사실':                   {floor:'본관 3층', top:'33.7%', left:'40.9%'},
+  '혈액종양내과':             {floor:'본관 3층', top:'33%',   left:'30.6%'},
+  '암센터 상담실':            {floor:'본관 3층', top:'43.2%', left:'30.4%'},
+  '의무기록영상발급':         {floor:'본관 3층', top:'46.5%', left:'23.6%'},
+  '호흡기. 알레르기 검사실': {floor:'본관 3층', top:'42.5%', left:'15.3%'},
+  '알레르기 감염내과':        {floor:'본관 3층', top:'57%',   left:'11.7%'},
+  '통증클리닉':               {floor:'본관 3층', top:'69.6%', left:'7.1%'},
+  '소아청소년과':             {floor:'본관 3층', top:'71.2%', left:'17.5%'},
+  '입원 전 검사실':           {floor:'본관 3층', top:'70.2%', left:'25.5%'},
+  '소화기내과':               {floor:'본관 3층', top:'70.6%', left:'84.1%'},
+  '고객상담실':               {floor:'본관 3층', top:'70.2%', left:'92.6%'},
 
-  // 신관 지하 1층
-  '핵의학과(pet-ct/골밀도)':   {floor:'신관 지하1층', top:'75.7%', left:'42.1%'},
+  '핵의학과(pet-ct/골밀도)':  {floor:'신관 지하1층', top:'75.7%', left:'42.1%'},
 
-  // 신관 1층
   '종합건강진단센터':         {floor:'신관 1층', top:'35.1%', left:'17%'},
   '종합건진 ct':              {floor:'신관 1층', top:'47.2%', left:'74.9%'},
   '건강관리센터(공단건진)':   {floor:'신관 1층', top:'71.3%', left:'47.9%'},
 
-  // 신관 2층
   '흉부외과':                 {floor:'신관 2층', top:'30.1%', left:'15.8%'},
-  '심혈관센터 외래':           {floor:'신관 2층', top:'32.7%', left:'51.6%'},
-  '심혈관센터 검사실':         {floor:'신관 2층', top:'43.1%', left:'74.2%'}, // 심전도/ekg/홀터
+  '심혈관센터 외래':          {floor:'신관 2층', top:'32.7%', left:'51.6%'},
+  '심혈관센터 검사실':        {floor:'신관 2층', top:'43.1%', left:'74.2%'},
   '산부인과':                 {floor:'신관 2층', top:'59.9%', left:'72.5%'},
   '내분비내과':               {floor:'신관 2층', top:'65.5%', left:'55.9%'},
 
-  // 신관 3층
   '이비인후과':               {floor:'신관 3층', top:'39.1%', left:'35.7%'},
   '비뇨의학과':               {floor:'신관 3층', top:'37.8%', left:'55.4%'},
   '안과':                     {floor:'신관 3층', top:'50.3%', left:'70%'},
@@ -478,430 +745,340 @@ const positions = {
   '성형외과':                 {floor:'신관 3층', top:'50.6%', left:'83.4%'},
   '치과':                     {floor:'신관 3층', top:'57.7%', left:'74.2%'},
   '정신건강의학과':           {floor:'신관 3층', top:'72.9%', left:'59.8%'},
-  '진료협력센터':             {floor:'신관 3층', top:'79%', left:'34.3%'}
+  '진료협력센터':             {floor:'신관 3층', top:'79%',   left:'34.3%'}
 };
 
-/* ---- 별칭(소문자 검색 허용) ---- */
+/* ── 별칭 ── */
 const aliases = {
-  'ct': 'ct실',
-  'ct실': 'ct실',
-  'mri': 'mri실',
-  'xray': '일반촬영실',
-  'x-ray': '일반촬영실',
-  '초음파': '초음파검사실',
-  '심전도': '심혈관센터 검사실',
-  'ekg': '심혈관센터 검사실',
-  '홀터': '심혈관센터 검사실',
+  'ct':       'ct실',
+  'ct실':     'ct실',
+  'mri':      'mri실',
+  'xray':     '일반촬영실',
+  'x-ray':    '일반촬영실',
+  '초음파':   '초음파검사실',
+  '심전도':   '심혈관센터 검사실',
+  'ekg':      '심혈관센터 검사실',
+  '홀터':     '심혈관센터 검사실',
   '심장내과': '심혈관센터 외래',
-  'pet': '핵의학과(pet-ct/골밀도)',
-  'pet-ct': '핵의학과(pet-ct/골밀도)',
-  '골밀도': '핵의학과(pet-ct/골밀도)'
+  'pet':      '핵의학과(pet-ct/골밀도)',
+  'pet-ct':   '핵의학과(pet-ct/골밀도)',
+  '골밀도':   '핵의학과(pet-ct/골밀도)'
 };
 
-/* ---- 엘리먼트 캐싱 ---- */
-const startInput = document.getElementById('startInput');
-const endInput = document.getElementById('endInput');
+/* ── 요소 캐싱 ── */
+const startInput  = document.getElementById('startInput');
+const endInput    = document.getElementById('endInput');
 const searchInput = document.getElementById('searchInput');
 
-const startSuggestBox = document.getElementById('startSuggest');
-const endSuggestBox   = document.getElementById('endSuggest');
-const searchSuggestBox= document.getElementById('searchSuggest');
+const startSuggestBox  = document.getElementById('startSuggest');
+const endSuggestBox    = document.getElementById('endSuggest');
+const searchSuggestBox = document.getElementById('searchSuggest');
 
-const startSuggestList = document.getElementById('startSuggestList');
-const endSuggestList   = document.getElementById('endSuggestList');
-const searchSuggestList= document.getElementById('searchSuggestList');
+const startSuggestList  = document.getElementById('startSuggestList');
+const endSuggestList    = document.getElementById('endSuggestList');
+const searchSuggestList = document.getElementById('searchSuggestList');
 
-const mapsContainer    = document.getElementById('mapsContainer');
-const currentBlock     = document.getElementById('currentBlock');
-const destBlock        = document.getElementById('destBlock');
-const mapCurrentWrap   = document.getElementById('mapCurrent');
-const mapDestWrap      = document.getElementById('mapDestination');
-const mapImageCurrent  = document.getElementById('mapImageCurrent');
-const mapImageDest     = document.getElementById('mapImageDestination');
-const messageBox       = document.getElementById('message');
+const mapsContainer   = document.getElementById('mapsContainer');
+const currentBlock    = document.getElementById('currentBlock');
+const destBlock       = document.getElementById('destBlock');
+const mapCurrentWrap  = document.getElementById('mapCurrent');
+const mapDestWrap     = document.getElementById('mapDestination');
+const mapImageCurrent = document.getElementById('mapImageCurrent');
+const mapImageDest    = document.getElementById('mapImageDestination');
+const loadingOverlay  = document.getElementById('loadingOverlay');
+const resultChip      = document.getElementById('resultChip');
+const chipTitle       = document.getElementById('chipTitle');
+const chipBody        = document.getElementById('chipBody');
+const legendBox       = document.getElementById('legendBox');
 
-const loadingOverlay   = document.getElementById('loadingOverlay');
+/* ── 탭 전환 ── */
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
 
-/* ---- 유틸: 표준화 ---- */
-function norm(str){
-  return str.toLowerCase().replace(/\s+/g,'');
-}
-
-/* ---- 추천어 리스트 생성 ---- */
-function getSuggestions(query){
-  if(!query) return [];
-  const q = norm(query);
-
-  let aliasMatches = [];
-  Object.keys(aliases).forEach(aKey=>{
-    if(norm(aKey).includes(q)){
-      const realName = aliases[aKey];
-      if(positions[realName]){
-        aliasMatches.push(realName);
-      }
-    }
-  });
-
-  let directMatches = [];
-  Object.keys(positions).forEach(pKey=>{
-    if(norm(pKey).includes(q)){
-      directMatches.push(pKey);
-    }
-  });
-
-  const merged=[...aliasMatches,...directMatches];
-  const unique=[...new Set(merged)];
-  return unique.slice(0,5).map(name=>{
-    const {floor}=positions[name];
-    return {name, floor};
-  });
-}
-
-/* ---- 추천 박스 렌더 ---- */
-function fillSuggestions(listEl, boxEl, suggestions, targetInput){
-  listEl.innerHTML='';
-  if(suggestions.length===0){
-    boxEl.style.display='none';
-    return;
+  if (tab === 'route') {
+    document.querySelectorAll('.tab-btn')[0].classList.add('active');
+    document.getElementById('panelRoute').classList.add('active');
+  } else {
+    document.querySelectorAll('.tab-btn')[1].classList.add('active');
+    document.getElementById('panelQuick').classList.add('active');
   }
-  suggestions.forEach(sug=>{
-    const div=document.createElement('div');
-    div.className='suggest-item';
-    div.innerHTML=`<b>${sug.name}</b><small>${sug.floor}</small>`;
-    div.onclick=()=>{
-      targetInput.value=sug.name;
-      boxEl.style.display='none';
+  // 결과 초기화
+  hideResults();
+}
+
+function hideResults() {
+  mapsContainer.style.display = 'none';
+  resultChip.style.display = 'none';
+  legendBox.style.display = 'none';
+}
+
+/* ── 유틸 ── */
+function norm(str) { return str.toLowerCase().replace(/\s+/g, ''); }
+
+function resolveKey(raw) {
+  if (!raw) return null;
+  const lowered = raw.trim().toLowerCase();
+  const aliased = aliases[lowered] ? aliases[lowered] : lowered;
+  return Object.keys(positions).find(k => k.toLowerCase().includes(aliased)) || null;
+}
+
+/* ── 자동완성 ── */
+function getSuggestions(query) {
+  if (!query) return [];
+  const q = norm(query);
+  const aliasMatches = [];
+  Object.keys(aliases).forEach(aKey => {
+    if (norm(aKey).includes(q)) {
+      const real = aliases[aKey];
+      if (positions[real]) aliasMatches.push(real);
+    }
+  });
+  const directMatches = Object.keys(positions).filter(k => norm(k).includes(q));
+  const unique = [...new Set([...aliasMatches, ...directMatches])];
+  return unique.slice(0, 6).map(name => ({ name, floor: positions[name].floor }));
+}
+
+/* 층 이미지 미리 로드 */
+const preloadedFloors = new Set();
+function preloadFloor(floorName) {
+  if (preloadedFloors.has(floorName) || !maps[floorName]) return;
+  preloadedFloors.add(floorName);
+  const img = new Image();
+  img.src = maps[floorName];
+}
+
+function fillSuggestions(listEl, boxEl, suggestions, targetInput) {
+  listEl.innerHTML = '';
+  if (!suggestions.length) { boxEl.style.display = 'none'; return; }
+  suggestions.forEach(sug => {
+    const div = document.createElement('div');
+    div.className = 'suggest-item';
+    div.innerHTML = `<b>${sug.name}</b><span class="suggest-floor">${sug.floor}</span>`;
+
+    // 마우스/터치가 올라오는 순간 해당 층 이미지 미리 로드
+    div.addEventListener('mouseenter', () => preloadFloor(sug.floor));
+    div.addEventListener('touchstart', () => preloadFloor(sug.floor), {passive: true});
+
+    div.onclick = () => {
+      targetInput.value = sug.name;
+      boxEl.style.display = 'none';
+      // 선택 즉시 지도 표시
+      if (targetInput === searchInput) {
+        searchPlace();
+      } else if (targetInput === endInput) {
+        navigateRoute();
+      } else if (targetInput === startInput) {
+        if (endInput.value.trim()) navigateRoute();
+      }
     };
     listEl.appendChild(div);
   });
-  boxEl.style.display='block';
+  boxEl.style.display = 'block';
 }
 
-function showSuggestions(type){
-  if(type==='start'){
-    fillSuggestions(
-      startSuggestList,
-      startSuggestBox,
-      getSuggestions(startInput.value),
-      startInput
-    );
-  }else if(type==='end'){
-    fillSuggestions(
-      endSuggestList,
-      endSuggestBox,
-      getSuggestions(endInput.value),
-      endInput
-    );
-  }else if(type==='search'){
-    fillSuggestions(
-      searchSuggestList,
-      searchSuggestBox,
-      getSuggestions(searchInput.value),
-      searchInput
-    );
-  }
+function showSuggestions(type) {
+  if (type === 'start')  fillSuggestions(startSuggestList,  startSuggestBox,  getSuggestions(startInput.value),  startInput);
+  if (type === 'end')    fillSuggestions(endSuggestList,    endSuggestBox,    getSuggestions(endInput.value),    endInput);
+  if (type === 'search') fillSuggestions(searchSuggestList, searchSuggestBox, getSuggestions(searchInput.value), searchInput);
 }
 
-/* ---- 바깥 클릭 시 추천창 닫기 ---- */
-document.addEventListener('click',(e)=>{
-  const inStart=e.target.closest('#startSuggest')||e.target.closest('#startInput');
-  if(!inStart){startSuggestBox.style.display='none';}
-
-  const inEnd=e.target.closest('#endSuggest')||e.target.closest('#endInput');
-  if(!inEnd){endSuggestBox.style.display='none';}
-
-  const inSearch=e.target.closest('#searchSuggest')||e.target.closest('#searchInput');
-  if(!inSearch){searchSuggestBox.style.display='none';}
+document.addEventListener('click', e => {
+  if (!e.target.closest('#startSuggest')  && !e.target.closest('#startInput'))  startSuggestBox.style.display  = 'none';
+  if (!e.target.closest('#endSuggest')    && !e.target.closest('#endInput'))    endSuggestBox.style.display    = 'none';
+  if (!e.target.closest('#searchSuggest') && !e.target.closest('#searchInput')) searchSuggestBox.style.display = 'none';
 });
 
-/* ---- 별칭 포함 검색 키 매칭 ---- */
-function resolveKey(raw){
-  if(!raw) return null;
-  const lowered=raw.trim().toLowerCase();
-  const aliased=aliases[lowered] ? aliases[lowered] : lowered;
-  const match=Object.keys(positions).find(k =>
-    k.toLowerCase().includes(aliased)
-  );
-  return match||null;
-}
-
-/* ---- 마커 추가 ---- */
-function addMarker(wrapper, cls, top, left){
-  const m=document.createElement('div');
-  m.className='marker '+cls;
-  m.style.top=top;
-  m.style.left=left;
+/* ── 마커 ── */
+function addMarker(wrapper, cls, top, left) {
+  const m = document.createElement('div');
+  m.className = 'marker ' + cls;
+  m.style.top  = top;
+  m.style.left = left;
   wrapper.appendChild(m);
 }
 
-/* ---- 지도 세팅 ---- */
-function setupMap(wrapper, imgEl, floorName){
-  wrapper.querySelectorAll('.marker').forEach(n=>n.remove());
-  imgEl.src=maps[floorName];
-  imgEl.dataset.floorName=floorName;
+/* ── 지도 세팅 ── */
+function setupMap(wrapper, imgEl, floorName) {
+  wrapper.querySelectorAll('.marker').forEach(n => n.remove());
+  imgEl.src = maps[floorName];
+  imgEl.dataset.floorName = floorName;
 }
 
-/* ---- 로딩 오버레이 제어 ---- */
-function showLoading(){
-  loadingOverlay.style.display='flex';
-}
-function hideLoading(){
-  loadingOverlay.style.display='none';
-}
+/* ── 로딩 ── */
+function showLoading() { loadingOverlay.style.display = 'flex'; }
+function hideLoading()  { loadingOverlay.style.display = 'none'; }
 
-/* 이미지 두 장(or 한 장) 모두 로드 완료 후에만 hideLoading */
-function waitImagesLoaded(imgEls, callback){
-  let remain = imgEls.length;
-  function done(){
-    remain -= 1;
-    if(remain<=0){
-      callback();
-    }
-  }
-  imgEls.forEach(imgEl=>{
-    if(!imgEl || !imgEl.src){
-      // src 없으면 바로 완료로 카운트
-      done();
-      return;
-    }
-    if(imgEl.complete){
-      // 이미 로드된 상태
-      done();
-    }else{
-      imgEl.onload = done;
-      imgEl.onerror = done;
-    }
+function waitImagesLoaded(imgEls, callback) {
+  let remain = imgEls.filter(i => i && i.src).length || 1;
+  const done = () => { if (--remain <= 0) callback(); };
+  imgEls.forEach(imgEl => {
+    if (!imgEl || !imgEl.src) return;
+    imgEl.complete ? done() : (imgEl.onload = imgEl.onerror = done);
   });
 }
 
-/* ---- 빠른 위치 찾기 (도착지만) ---- */
-function searchPlace(){
-  const raw=searchInput.value.trim();
-  if(!raw){
-    messageBox.textContent='검색어를 입력해주세요.';
-    messageBox.style.color='#d9534f';
-    mapsContainer.style.display='none';
-    return;
-  }
-
-  const key=resolveKey(raw);
-  if(!key){
-    messageBox.textContent='일치하는 장소를 찾을 수 없습니다.';
-    messageBox.style.color='#d9534f';
-    mapsContainer.style.display='none';
-    return;
-  }
-
-  const dst=positions[key];
-
-  // 로딩 시작
-  showLoading();
-
-  // 지도 구성: "도착지만" 보여줘야 하므로
-  // - currentBlock 숨김
-  // - destBlock만 표시
-  currentBlock.style.display='none';
-  destBlock.style.display='block';
-  mapsContainer.style.display='block';
-
-  // 도착층 지도만 세팅
-  setupMap(mapDestWrap, mapImageDestination, dst.floor);
-
-  // 도착 마커
-  addMarker(mapDestWrap,'end',dst.top,dst.left);
-
-  // 메시지
-  messageBox.textContent=
-    `${dst.floor} ${key} 위치가 표시되었습니다.\n주황색 점이 도착지예요.\n지도를 누르면 크게 볼 수 있어요 🖱️`;
-  messageBox.style.color='#009688';
-
-  // 이미지 로딩 끝나면 로딩팝업 닫기
-  waitImagesLoaded([mapImageDestination], hideLoading);
+/* ── fade-in 트리거 ── */
+function triggerFadeIn(el) {
+  el.classList.remove('fade-in');
+  void el.offsetWidth; // reflow
+  el.classList.add('fade-in');
 }
 
-/* ---- 경로 안내 (출발지 → 도착지) ---- */
-function navigateRoute(){
-  const sVal=startInput.value.trim();
-  const eVal=endInput.value.trim();
-
-  if(!eVal){
-    messageBox.textContent='도착지를 입력해주세요.';
-    messageBox.style.color='#d9534f';
-    mapsContainer.style.display='none';
-    return;
-  }
-
-  const startKey=resolveKey(sVal);
-  const endKey=resolveKey(eVal);
-
-  if(!endKey){
-    messageBox.textContent='도착지를 찾을 수 없습니다.';
-    messageBox.style.color='#d9534f';
-    mapsContainer.style.display='none';
-    return;
-  }
-
-  const src=startKey?positions[startKey]:null;
-  const dst=positions[endKey];
-
-  const srcFloor=src?src.floor:null;
-  const dstFloor=dst.floor;
-
-  // 로딩 시작
-  showLoading();
-
-  // 경로 안내 시에는 출발층+도착층 모두 보여줌
-  currentBlock.style.display='block';
-  destBlock.style.display='block';
-  mapsContainer.style.display='block';
-
-  // 위 지도(출발층 또는 fallback)
-  const currentFloorToShow = srcFloor || dstFloor;
-  setupMap(mapCurrentWrap, mapImageCurrent, currentFloorToShow);
-
-  // 아래 지도(도착층)
-  setupMap(mapDestWrap, mapImageDestination, dstFloor);
-
-  // 출발지 마커(초록)
-  if(src){
-    addMarker(mapCurrentWrap,'start',src.top,src.left);
-  }
-
-  // 엘리베이터(구리색) - 출발층 기준
-  const elevInfo=elevators[currentFloorToShow];
-  if(elevInfo){
-    addMarker(mapCurrentWrap,'elevator',elevInfo.top,elevInfo.left);
-  }
-
-  // 도착지(주황)
-  addMarker(mapDestWrap,'end',dst.top,dst.left);
-
-  // 안내 문구 만들기
-  const srcBuilding = srcFloor ? (srcFloor.includes('본관')?'본관':'신관') : null;
-  const dstBuilding = dstFloor.includes('본관')?'본관':'신관';
-  const sameBuilding = (srcBuilding && srcBuilding===dstBuilding);
-  const sameFloor    = (srcFloor && srcFloor===dstFloor);
-
-  let text='';
-  if(src){
-    text += `${srcFloor} ${startKey} → ${dstFloor} ${endKey}로 이동합니다 🙂\n`;
-  }else{
-    text += `${dstFloor} ${endKey} 위치를 표시했습니다 🙂\n`;
-  }
-
-  if(!src){
-    text += `주황색 점이 도착지예요.\n지도를 누르면 크게 볼 수 있어요 🖱️`;
-  }else if(sameBuilding && sameFloor){
-    text += `같은 층이므로 바로 이동하시면 됩니다 🙂\n출발지는 초록색, 도착지는 주황색으로 표시돼요.\n지도를 누르면 크게 볼 수 있어요 🖱️`;
-  }else if(sameBuilding && !sameFloor){
-    text += `같은 건물이지만 층이 달라요.\n${srcFloor}에서 엘리베이터(구리색 점)를 타고 ${dstFloor}으로 이동해주세요 🚪`;
-  }else{
-    text += `건물이 다릅니다.\n본관과 신관은 2층 또는 3층 연결통로를 이용하시면 됩니다 🚶‍♀️`;
-  }
-
-  messageBox.textContent=text;
-  messageBox.style.color='#009688';
-
-  // 두 장 다 로딩 끝나면 로딩팝업 닫기
-  waitImagesLoaded([mapImageCurrent,mapImageDestination], hideLoading);
+/* ── 결과 표시 공통 ── */
+function showResult(titleText, bodyText, isOrange) {
+  chipTitle.textContent = titleText;
+  chipBody.textContent  = bodyText;
+  resultChip.className  = 'result-chip' + (isOrange ? ' orange-accent' : '') + ' fade-in';
+  resultChip.style.display = 'block';
+  triggerFadeIn(resultChip);
 }
 
-/* ---- 이미지 팝업 ---- */
-function openImagePopup(src){
-  const pop = document.getElementById('imagePopup');
-  const img = document.getElementById('popupImg');
+/* ── 빠른 위치 찾기 ── */
+function searchPlace() {
+  const raw = searchInput.value.trim();
+  if (!raw) { showResult('⚠️ 안내', '검색어를 입력해주세요.', false); mapsContainer.style.display = 'none'; legendBox.style.display = 'none'; return; }
+
+  const key = resolveKey(raw);
+  if (!key)  { showResult('⚠️ 검색 결과 없음', '일치하는 장소를 찾을 수 없습니다.\n정확한 진료과 또는 검사실 이름을 입력해주세요.', false); mapsContainer.style.display = 'none'; legendBox.style.display = 'none'; return; }
+
+  const dst = positions[key];
+  showLoading();
+
+  currentBlock.style.display = 'none';
+  destBlock.style.display = 'block';
+  mapsContainer.style.display = 'block';
+  setupMap(mapDestWrap, mapImageDest, dst.floor);
+  addMarker(mapDestWrap, 'end', dst.top, dst.left);
+
+  showResult(`📍 ${dst.floor} · ${key}`, `주황색 점이 도착지 위치예요.\n지도를 탭하면 크게 볼 수 있어요 🔎`, true);
+  legendBox.style.display = 'flex';
+
+  waitImagesLoaded([mapImageDest], () => {
+    hideLoading();
+    triggerFadeIn(mapsContainer);
+  });
+}
+
+/* ── 경로 안내 ── */
+function navigateRoute() {
+  const sVal = startInput.value.trim();
+  const eVal = endInput.value.trim();
+
+  if (!eVal) { showResult('⚠️ 안내', '도착지를 입력해주세요.', false); mapsContainer.style.display = 'none'; legendBox.style.display = 'none'; return; }
+
+  const startKey = resolveKey(sVal);
+  const endKey   = resolveKey(eVal);
+
+  if (!endKey) { showResult('⚠️ 검색 결과 없음', '도착지를 찾을 수 없습니다.\n정확한 진료과 또는 검사실 이름을 입력해주세요.', false); mapsContainer.style.display = 'none'; legendBox.style.display = 'none'; return; }
+
+  const src = startKey ? positions[startKey] : null;
+  const dst = positions[endKey];
+  const srcFloor = src ? src.floor : null;
+  const dstFloor = dst.floor;
+
+  showLoading();
+  currentBlock.style.display = 'block';
+  destBlock.style.display = 'block';
+  mapsContainer.style.display = 'block';
+
+  const currentFloor = srcFloor || dstFloor;
+  setupMap(mapCurrentWrap, mapImageCurrent, currentFloor);
+  setupMap(mapDestWrap,    mapImageDest,    dstFloor);
+
+  if (src) addMarker(mapCurrentWrap, 'start', src.top, src.left);
+  const elev = elevators[currentFloor];
+  if (elev) addMarker(mapCurrentWrap, 'elevator', elev.top, elev.left);
+  addMarker(mapDestWrap, 'end', dst.top, dst.left);
+
+  const srcBuilding  = srcFloor ? (srcFloor.includes('본관') ? '본관' : '신관') : null;
+  const dstBuilding  = dstFloor.includes('본관') ? '본관' : '신관';
+  const sameBuilding = srcBuilding && srcBuilding === dstBuilding;
+  const sameFloor    = srcFloor && srcFloor === dstFloor;
+
+  let title = src ? `🧭 ${startKey} → ${endKey}` : `📍 ${endKey}`;
+  let body  = '';
+  if (!src) {
+    body = `${dstFloor}에 위치해 있어요.\n주황색 점이 도착지예요. 지도를 탭하면 크게 볼 수 있어요 🔎`;
+  } else if (sameBuilding && sameFloor) {
+    body = `같은 층이에요! 바로 이동하시면 됩니다 🙂\n초록색 → 출발지 / 주황색 → 도착지`;
+  } else if (sameBuilding && !sameFloor) {
+    body = `같은 건물이지만 층이 달라요.\n${srcFloor} 엘리베이터(갈색 점)를 타고 ${dstFloor}으로 이동해주세요 🚪`;
+  } else {
+    body = `건물이 달라요.\n본관 ↔ 신관은 2층 또는 3층 연결통로를 이용하세요 🚶`;
+  }
+
+  showResult(title, body, false);
+  legendBox.style.display = 'flex';
+
+  waitImagesLoaded([mapImageCurrent, mapImageDest], () => {
+    hideLoading();
+    triggerFadeIn(mapsContainer);
+  });
+}
+
+/* ── 이미지 팝업 ── */
+function openImagePopup(src, type) {
+  const pop    = document.getElementById('imagePopup');
+  const img    = document.getElementById('popupImg');
   const marker = document.getElementById('popupMarker');
 
-  // 이미지 경로 지정
   img.src = src;
 
-  // 도착지 지도에서 주황색 마커를 찾아서 팝업에도 동일하게 표시
-  const destMarker = mapDestWrap.querySelector('.marker.end');
-  if(destMarker){
-    const topPct = destMarker.style.top;
-    const leftPct = destMarker.style.left;
-    marker.style.top = topPct;
-    marker.style.left = leftPct;
+  const wrapper = (type === 'end') ? mapDestWrap : mapCurrentWrap;
+  const destM   = wrapper.querySelector('.marker.end');
+  if (destM) {
+    marker.style.top   = destM.style.top;
+    marker.style.left  = destM.style.left;
     marker.style.display = 'block';
   } else {
     marker.style.display = 'none';
   }
-
   pop.style.display = 'flex';
 }
 
-function closeImagePopup(){
+function closeImagePopup() {
   document.getElementById('imagePopup').style.display = 'none';
 }
 
-document.getElementById('imagePopup').addEventListener('click', (e) => {
-  const inner = document.getElementById('popupInner');
-  if(!inner.contains(e.target)){
-    closeImagePopup();
-  }
+document.getElementById('imagePopup').addEventListener('click', e => {
+  if (!document.getElementById('popupInner').contains(e.target)) closeImagePopup();
 });
 
-/* ---- 관리자 모드 (Alt+M) ---- */
-let adminMode=false;
-document.addEventListener('keydown',e=>{
-  if(e.altKey && e.key==='m'){
-    toggleAdminMode();
-  }
-});
-function toggleAdminMode(){
-  if(!adminMode){
-    const pw=prompt("관리자 비밀번호를 입력하세요:");
-    if(pw!=="gnah2025"){
-      alert("비밀번호가 올바르지 않습니다.");
-      return;
-    }
-    adminMode=true;
-    alert("🛠️ 관리자 모드 활성화\n(아래 지도)를 클릭하면 좌표를 얻을 수 있습니다.");
-    mapDestWrap.addEventListener('click',handleAdminClick);
-  }else{
-    adminMode=false;
+/* ── 관리자 모드 (Alt+M) ── */
+let adminMode = false;
+document.addEventListener('keydown', e => { if (e.altKey && e.key === 'm') toggleAdminMode(); });
+
+function toggleAdminMode() {
+  if (!adminMode) {
+    if (prompt("관리자 비밀번호:") !== "gnah2025") { alert("비밀번호가 올바르지 않습니다."); return; }
+    adminMode = true;
+    alert("🛠️ 관리자 모드 활성화\n도착층 지도를 클릭하면 좌표를 얻을 수 있습니다.");
+    mapDestWrap.addEventListener('click', handleAdminClick);
+  } else {
+    adminMode = false;
     alert("관리자 모드 종료");
-    mapDestWrap.removeEventListener('click',handleAdminClick);
+    mapDestWrap.removeEventListener('click', handleAdminClick);
   }
 }
-function handleAdminClick(e){
-  if(!adminMode)return;
-  const rect=mapImageDestination.getBoundingClientRect();
-  const xPct=((e.clientX-rect.left)/rect.width)*100;
-  const yPct=((e.clientY-rect.top)/rect.height)*100;
-  const floorGuess=mapImageDestination.dataset.floorName||'';
-  const label=prompt(
-    `이 위치의 이름을 입력하세요.\n좌표: top:${yPct.toFixed(1)}%, left:${xPct.toFixed(1)}%\n층: ${floorGuess}`
-  );
-  if(!label)return;
-  const finalFloor=floorGuess||prompt("층 이름을 입력하세요 (예: 본관 2층)");
-  positions[label]={
-    floor:finalFloor,
-    top:yPct.toFixed(1)+'%',
-    left:xPct.toFixed(1)+'%'
-  };
-  console.log("✅ 새 위치 추가:",label,positions[label]);
-  alert(`${finalFloor} ${label} 추가 완료!\n(F12 콘솔에서 확인 가능)`);
+
+function handleAdminClick(e) {
+  if (!adminMode) return;
+  const rect = mapImageDest.getBoundingClientRect();
+  const xPct = ((e.clientX - rect.left) / rect.width  * 100).toFixed(1);
+  const yPct = ((e.clientY - rect.top)  / rect.height * 100).toFixed(1);
+  const floor = mapImageDest.dataset.floorName || '';
+  const label = prompt(`이름 입력\n좌표: top:${yPct}%, left:${xPct}%\n층: ${floor}`);
+  if (!label) return;
+  positions[label] = { floor, top: yPct + '%', left: xPct + '%' };
+  console.log("✅ 추가:", label, positions[label]);
+  alert(`${floor} ${label} 추가 완료!`);
 }
 
-/* ---- 사전 프리캐시 (속도 향상) ---- */
-(function precacheAll(){
-  Object.values(maps).forEach(url=>{
-    const img=new Image();
-    img.src=url;
-  });
+/* ── 사전 프리캐시 ── */
+(function precache() {
+  Object.values(maps).forEach(url => { const i = new Image(); i.src = url; });
 })();
 </script>
-
-<div style="padding:20px; font-size:16px; line-height:1.5;">
-  <p>😊병원 안내 정보가 도움이 되셨나요?</p>
-<p>혹시 수정이 필요하거나 보완할 부분이 있다면</p>
-  <p>언제든지 아래 이메일로 알려주세요.</p>
-<p>t161930@gnah.co.kr</p>
-</div>
-  
 </body>
 </html>
-
-
-
