@@ -517,6 +517,32 @@
     transform: none !important;
     opacity: 0.7;
   }
+
+  /* ── 경로 SVG ── */
+  .path-svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 5;
+    pointer-events: none;
+    overflow: visible;
+  }
+  .path-line {
+    fill: none;
+    stroke: var(--orange);
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.85;
+  }
+  .path-line-bg {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.55;
+  }
 </style>
 </head>
 <body>
@@ -694,7 +720,7 @@
 <div class="footer-note">
   <p>😊 병원 안내 정보가 도움이 되셨나요?</p>
   <p>수정이 필요하거나 보완할 부분이 있다면<br>
-  언제든지 t161930@gnah.co.kr로 알려주세요.</p>
+  언제든지 <a href="/cdn-cgi/l/email-protection#52266364636b616212353c333a7c313d7c3920"><span class="__cf_email__" data-cfemail="d0a4e1e6e1e9e3e090b7beb1b8feb3bffebba2">[email&#160;protected]</span></a> 로 알려주세요.</p>
 </div>
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
@@ -764,8 +790,6 @@ const positions = {
   '입원 전 검사실':           {floor:'본관 3층', top:'70.2%', left:'25.5%'},
   '소화기내과':               {floor:'본관 3층', top:'70.6%', left:'84.1%'},
   '고객상담실':               {floor:'본관 3층', top:'70.2%', left:'92.6%'},
-  '본관 3층 채혈실':               {floor:'본관 3층', top:'58.4%', left:'66.9%'},
-  '본관 3층 수납':               {floor:'본관 3층', top:'79%', left:'67.1%'},
 
   '핵의학과(pet-ct/골밀도)':  {floor:'신관 지하1층', top:'75.7%', left:'42.1%'},
 
@@ -778,8 +802,6 @@ const positions = {
   '심혈관센터 검사실':        {floor:'신관 2층', top:'43.1%', left:'74.2%'},
   '산부인과':                 {floor:'신관 2층', top:'59.9%', left:'72.5%'},
   '내분비내과':               {floor:'신관 2층', top:'65.5%', left:'55.9%'},
-  '신관 2층 채혈실':               {floor:'신관 2층', top:'37%', left:'10.5%'},
-  '신관 2층 수납':               {floor:'신관 2층', top:'48.2%', left:'10.9%'},
 
   '이비인후과':               {floor:'신관 3층', top:'39.1%', left:'35.7%'},
   '비뇨의학과':               {floor:'신관 3층', top:'37.8%', left:'55.4%'},
@@ -788,7 +810,6 @@ const positions = {
   '성형외과':                 {floor:'신관 3층', top:'50.6%', left:'83.4%'},
   '치과':                     {floor:'신관 3층', top:'57.7%', left:'74.2%'},
   '정신건강의학과':           {floor:'신관 3층', top:'72.9%', left:'59.8%'},
-  '신관 3층 수납':               {floor:'신관 3층', top:'87.5%', left:'49.4%'},
   '진료협력센터':             {floor:'신관 3층', top:'79%',   left:'34.3%'}
 };
 
@@ -953,6 +974,7 @@ function addMarker(wrapper, cls, top, left) {
 /* ── 지도 세팅 ── */
 function setupMap(wrapper, imgEl, floorName) {
   wrapper.querySelectorAll('.marker').forEach(n => n.remove());
+  wrapper.querySelectorAll('.path-svg').forEach(n => n.remove());
   imgEl.src = maps[floorName];
   imgEl.dataset.floorName = floorName;
 }
@@ -1106,6 +1128,7 @@ function navigateRoute() {
   waitImagesLoaded([mapImageCurrent, mapImageDest], () => {
     hideLoading();
     triggerFadeIn(mapsContainer);
+    renderPaths(src, dst, srcFloor || dstFloor, dstFloor, sameFloor);
   });
 }
 
@@ -1167,6 +1190,464 @@ function handleAdminClick(e) {
   alert(`${floor} ${label} 추가 완료!`);
 }
 
+
+/* ════════════════════════════════════════════
+   복도 경로 시스템
+   ════════════════════════════════════════════ */
+
+const corridorGraph = {
+
+  /* ─────────────────────────────
+     본관 지하1층
+     진료실: 방사선종양학과(25.3, 30.6)
+  ───────────────────────────── */
+  '본관 지하1층': {
+    nodes: {
+      '방사선_앞':   {x:25.3, y:30.6},
+      'c_h1':        {x:36,   y:30.6},
+      'c_h2':        {x:46.4, y:30.6},
+      'elev':        {x:46.4, y:65.2},
+      'c_v1':        {x:46.4, y:45},
+    },
+    edges: [
+      ['방사선_앞','c_h1'],['c_h1','c_h2'],
+      ['c_h2','c_v1'],['c_v1','elev'],
+    ],
+    elevator: 'elev'
+  },
+
+  /* ─────────────────────────────
+     본관 2층 (가장 복잡한 층)
+     주요 복도:
+       가로 상단: y≈12~21
+       가로 중단: y≈32  (메인 복도)
+       가로 하단: y≈47, y≈70, y≈80
+       세로 좌:   x≈10
+       세로 중:   x≈45.5 (엘리베이터 축)
+       세로 우:   x≈70
+  ───────────────────────────── */
+  '본관 2층': {
+    nodes: {
+      /* 메인 가로 복도 (y=32) */
+      'mh_l0':  {x:6.3,  y:41.8},  // 뇌신경검사실
+      'mh_l1':  {x:10,   y:28},    // 소화기병센터
+      'mh_l2':  {x:10,   y:32},
+      'mh_1':   {x:17.3, y:32},    // 혈관조영실 앞
+      'mh_2':   {x:28,   y:32},
+      'mh_3':   {x:38,   y:32},
+      'elev':   {x:45.5, y:32},    // 엘리베이터
+      'mh_4':   {x:52,   y:32},
+      'mh_5':   {x:60,   y:32},
+      'mh_6':   {x:70,   y:32},
+      'mh_7':   {x:86.8, y:20.5},  // 재활의학과(본관2층)
+
+      /* 상단 복도 (초음파/핵의학) */
+      'tp_1':   {x:45.5, y:21},
+      'tp_2':   {x:50,   y:12},    // 초음파검사실
+      'tp_3':   {x:55.9, y:18},    // 핵의학과(감마영상실)
+      'tp_4':   {x:60,   y:21},
+
+      /* 세로 중앙 복도 (엘리베이터 축, y=32~80) */
+      'cv_1':   {x:45.5, y:40},
+      'cv_2':   {x:45.5, y:47},    // CT/MRI 대기실 앞
+      'cv_3':   {x:45.5, y:56},
+      'cv_4':   {x:46.9, y:70},    // 다학제진료실
+      'cv_5':   {x:47,   y:80},    // 항암낮병동 앞
+
+      /* 중간 가로 복도 (y=47) */
+      'md_l1':  {x:17.3, y:44},    // 혈관조영실
+      'md_l2':  {x:6.3,  y:42},    // 뇌신경검사실
+      'md_ct':  {x:38.4, y:47},    // CT실/MRI실
+      'md_r1':  {x:60.1, y:44.5},  // 영상의학과 접수
+      'md_r2':  {x:70.8, y:44},    // 투시촬영실
+      'md_r3':  {x:70,   y:56.4},  // 일반촬영실
+      'md_r4':  {x:70,   y:71},    // CT3
+      'md_r5':  {x:68.3, y:80},    // 항암낮병동
+    },
+    edges: [
+      /* 메인 가로 복도 */
+      ['mh_l2','mh_1'],['mh_1','mh_2'],['mh_2','mh_3'],['mh_3','elev'],
+      ['elev','mh_4'],['mh_4','mh_5'],['mh_5','mh_6'],
+      ['mh_l1','mh_l2'],['mh_l2','mh_1'],
+      ['mh_l0','mh_l2'],
+
+      /* 상단 복도 */
+      ['elev','tp_1'],['tp_1','tp_2'],['tp_1','tp_3'],['tp_3','tp_4'],
+      ['tp_4','mh_4'],['mh_6','mh_7'],
+
+      /* 세로 중앙 */
+      ['elev','cv_1'],['cv_1','cv_2'],['cv_2','md_ct'],
+      ['cv_2','cv_3'],['cv_3','cv_4'],['cv_4','cv_5'],
+
+      /* 중간 가로 복도 */
+      ['mh_1','md_l1'],['md_l1','md_l2'],
+      ['cv_2','md_r1'],['md_r1','md_r2'],['md_r2','md_r3'],
+      ['md_r3','md_r4'],['md_r4','md_r5'],
+      ['cv_4','md_r4'],['cv_5','md_r5'],
+    ],
+    elevator: 'elev'
+  },
+
+  /* ─────────────────────────────
+     본관 3층
+     메인 복도: 가로 y≈33, y≈70
+                세로 x≈16, x≈46
+  ───────────────────────────── */
+  '본관 3층': {
+    nodes: {
+      /* 상단 진료실 앞 */
+      't_재활':   {x:20.7, y:24},
+      't_가정':   {x:30.4, y:24},
+      't_정형':   {x:46.2, y:22},
+      't_외과':   {x:68.6, y:22},
+      't_신장':   {x:82.2, y:17},
+
+      /* 메인 가로 복도 (y=33) */
+      'mh_l1':   {x:16.5, y:33},   // 호흡기내과
+      'mh_1':    {x:23,   y:33},
+      'mh_2':    {x:30.6, y:33},   // 혈액종양내과
+      'mh_3':    {x:40.9, y:33},   // 주사실
+      'mh_4':    {x:46.4, y:33},
+      'mh_5':    {x:52.3, y:34},   // 척추센터외래
+      'mh_6':    {x:63.5, y:35},   // 특수주사실
+      'mh_7':    {x:75.9, y:33},   // 신경외과
+      'mh_8':    {x:82.9, y:33},   // 류마티스내과
+      'mh_9':    {x:84.4, y:41},   // 신경과
+      'mh_10':   {x:76.1, y:41},   // 다학제통합진료
+
+      /* 세로 좌 복도 (x=16) */
+      'cv_l1':   {x:16,   y:43},
+      'cv_l2':   {x:15.3, y:42.5}, // 호흡기알레르기검사실
+      'cv_l3':   {x:16,   y:57},   // 알레르기감염내과
+      'cv_l4':   {x:16,   y:70},   // 통증클리닉
+
+      /* 세로 중앙 복도 (x=46) */
+      'elev':    {x:46.4, y:56},
+      'cv_c1':   {x:46.4, y:46},
+      'cv_c2':   {x:46.4, y:70},   // 입원전검사실 앞
+
+      /* 분기 */
+      'c_암센터': {x:30.4, y:43},  // 암센터 상담실
+      'c_의무':   {x:23.6, y:46.5},// 의무기록영상발급
+
+      /* 하단 가로 복도 (y=70) */
+      'bh_1':    {x:17.5, y:71},   // 소아청소년과
+      'bh_2':    {x:25.5, y:70},   // 입원전검사실
+      'bh_3':    {x:46.4, y:70},
+      'bh_4':    {x:84.1, y:70},   // 소화기내과
+      'bh_5':    {x:92.6, y:70},   // 고객상담실
+    },
+    edges: [
+      /* 상단 → 메인 복도 */
+      ['t_재활','mh_l1'],['t_가정','mh_2'],
+      ['t_정형','mh_4'],['t_외과','mh_7'],['t_신장','mh_8'],
+
+      /* 메인 가로 복도 */
+      ['mh_l1','mh_1'],['mh_1','mh_2'],['mh_2','mh_3'],
+      ['mh_3','mh_4'],['mh_4','mh_5'],['mh_5','mh_6'],
+      ['mh_6','mh_7'],['mh_7','mh_8'],['mh_8','mh_9'],
+      ['mh_7','mh_10'],['mh_9','mh_10'],
+
+      /* 세로 좌 복도 */
+      ['mh_l1','cv_l1'],['cv_l1','cv_l2'],
+      ['cv_l2','cv_l3'],['cv_l3','cv_l4'],
+      ['cv_l4','bh_1'],
+
+      /* 분기 */
+      ['mh_2','c_암센터'],['c_암센터','c_의무'],
+      ['c_의무','bh_2'],
+
+      /* 세로 중앙 (엘리베이터) */
+      ['mh_4','cv_c1'],['cv_c1','elev'],
+      ['elev','cv_c2'],['cv_c2','bh_3'],
+
+      /* 하단 가로 복도 */
+      ['bh_1','bh_2'],['bh_2','bh_3'],['bh_3','bh_4'],['bh_4','bh_5'],
+    ],
+    elevator: 'elev'
+  },
+
+  /* ─────────────────────────────
+     신관 지하1층
+     진료실: 핵의학과PET-CT(42.1, 75.7)
+  ───────────────────────────── */
+  '신관 지하1층': {
+    nodes: {
+      'pet_앞':  {x:42.1, y:75.7},
+      'c_h1':   {x:42.1, y:65},
+      'c_h2':   {x:30,   y:65},
+      'elev':   {x:20.2, y:62.5},
+    },
+    edges: [
+      ['pet_앞','c_h1'],['c_h1','c_h2'],['c_h2','elev'],
+    ],
+    elevator: 'elev'
+  },
+
+  /* ─────────────────────────────
+     신관 1층
+     진료실: 종합건강진단센터(17,35.1), 종합건진CT(74.9,47.2), 건강관리센터(47.9,71.3)
+  ───────────────────────────── */
+  '신관 1층': {
+    nodes: {
+      '건진_앞':  {x:17,   y:35.1},
+      'c_t1':    {x:17,   y:47},
+      'c_t2':    {x:30,   y:47},
+      'c_t3':    {x:47.9, y:55},
+      '건진ct_앞':{x:74.9, y:47.2},
+      'c_m1':    {x:47.9, y:47},
+      '공단건진': {x:47.9, y:71.3},
+      'c_b1':    {x:47.9, y:61},
+      'elev':    {x:14.1, y:61.4},
+    },
+    edges: [
+      ['건진_앞','c_t1'],['c_t1','c_t2'],['c_t2','c_m1'],
+      ['c_m1','건진ct_앞'],
+      ['c_m1','c_t3'],['c_t3','c_b1'],['c_b1','공단건진'],
+      ['c_t1','elev'],
+    ],
+    elevator: 'elev'
+  },
+
+  /* ─────────────────────────────
+     신관 2층
+     메인 복도: 가로 y≈38, y≈55, y≈70
+                세로 x≈15, x≈33, x≈55
+  ───────────────────────────── */
+  '신관 2층': {
+    nodes: {
+      /* 상단 복도 (y=30~38) */
+      't_흉부':   {x:15.8, y:30.1},
+      't_심외':   {x:33,   y:32},
+      't_심내':   {x:51.6, y:32.7},
+
+      /* 메인 가로 복도 (y=43) */
+      'mh_1':    {x:15.8, y:43},
+      'mh_2':    {x:33,   y:43},
+      'mh_3':    {x:51.6, y:43},
+      'mh_4':    {x:65,   y:43},
+      'mh_5':    {x:74.2, y:43},  // 심혈관센터 검사실
+
+      /* 세로 엘리베이터 복도 */
+      'elev':    {x:33.1, y:69.9},
+      'cv_1':    {x:33,   y:56},
+
+      /* 하단 복도 */
+      'bh_1':    {x:33,   y:60},
+      'bh_2':    {x:55.9, y:60},  // 내분비내과 앞
+      'bh_3':    {x:72.5, y:60},  // 산부인과
+      '내분비':  {x:55.9, y:65.5},
+    },
+    edges: [
+      /* 상단 → 메인 */
+      ['t_흉부','mh_1'],['t_심외','mh_2'],['t_심내','mh_3'],
+
+      /* 메인 가로 */
+      ['mh_1','mh_2'],['mh_2','mh_3'],['mh_3','mh_4'],['mh_4','mh_5'],
+
+      /* 세로 엘리베이터 축 */
+      ['mh_2','cv_1'],['cv_1','bh_1'],['bh_1','elev'],
+
+      /* 하단 가로 */
+      ['bh_1','bh_2'],['bh_2','bh_3'],
+      ['bh_2','내분비'],
+    ],
+    elevator: 'elev'
+  },
+
+  /* ─────────────────────────────
+     신관 3층
+     메인 복도: 가로 y≈44, y≈58, y≈72
+                세로 x≈36, x≈55, x≈70
+  ───────────────────────────── */
+  '신관 3층': {
+    nodes: {
+      /* 상단 */
+      't_이비':   {x:35.7, y:39.1},
+      't_비뇨':   {x:55.4, y:37.8},
+
+      /* 메인 가로 복도 (y=44~50) */
+      'mh_1':    {x:35.7, y:44},
+      'mh_2':    {x:46,   y:44},
+      'mh_3':    {x:55.4, y:44},
+      'mh_4':    {x:65,   y:50},   // 안과 앞
+      'mh_5':    {x:74,   y:50.5}, // 피부과/성형외과
+
+      /* 세로 복도 */
+      'cv_l':    {x:35.7, y:56},
+      'cv_m':    {x:55,   y:56},
+
+      /* 중간 가로 복도 (y=58) */
+      'md_1':    {x:55,   y:58},
+      'md_2':    {x:65,   y:58},
+      'md_3':    {x:74.2, y:57.7}, // 치과
+
+      /* 엘리베이터 복도 */
+      'elev':    {x:36,   y:65.8},
+      'cv_b1':   {x:36,   y:72},
+
+      /* 하단 복도 */
+      'bh_1':    {x:55,   y:66},
+      'bh_2':    {x:59.8, y:72.9}, // 정신건강의학과
+      'bh_3':    {x:34.3, y:79},   // 진료협력센터
+    },
+    edges: [
+      /* 상단 → 메인 */
+      ['t_이비','mh_1'],['t_비뇨','mh_3'],
+
+      /* 메인 가로 */
+      ['mh_1','mh_2'],['mh_2','mh_3'],['mh_3','mh_4'],['mh_4','mh_5'],
+
+      /* 세로 복도 */
+      ['mh_1','cv_l'],['cv_l','elev'],
+      ['mh_3','cv_m'],['cv_m','md_1'],
+
+      /* 중간 가로 */
+      ['md_1','md_2'],['md_2','md_3'],
+
+      /* 엘리베이터 하단 */
+      ['elev','cv_b1'],['cv_b1','bh_3'],
+      ['cv_b1','bh_2'],
+      ['bh_1','bh_2'],['elev','bh_1'],
+    ],
+    elevator: 'elev'
+  }
+};
+
+/* ── BFS 경로탐색 ── */
+function findCorridorPath(floorName, startPct, endPct) {
+  const g = corridorGraph[floorName];
+  if (!g) return [startPct, endPct];
+
+  const nodes = g.nodes;
+
+  function nearest(pct) {
+    let best = null, minD = Infinity;
+    Object.entries(nodes).forEach(([id, n]) => {
+      const dx = pct.x - n.x, dy = pct.y - n.y;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d < minD) { minD = d; best = id; }
+    });
+    return best;
+  }
+
+  const startId = nearest(startPct);
+  const endId   = nearest(endPct);
+  if (!startId || !endId) return [startPct, endPct];
+  if (startId === endId)  return [startPct, {x:nodes[startId].x, y:nodes[startId].y}, endPct];
+
+  // Build adjacency
+  const adj = {};
+  Object.keys(nodes).forEach(id => adj[id] = []);
+  g.edges.forEach(([a,b]) => { adj[a].push(b); adj[b].push(a); });
+
+  // BFS
+  const visited = {[startId]: null};
+  const queue = [startId];
+  let found = false;
+  while (queue.length && !found) {
+    const cur = queue.shift();
+    if (cur === endId) { found = true; break; }
+    (adj[cur]||[]).forEach(nb => {
+      if (!(nb in visited)) { visited[nb] = cur; queue.push(nb); }
+    });
+  }
+
+  // Reconstruct
+  if (!found && !(endId in visited)) return [startPct, endPct];
+  const nodeIds = [];
+  let cur = endId;
+  while (cur !== null) { nodeIds.unshift(cur); cur = visited[cur]; }
+
+  return [
+    startPct,
+    ...nodeIds.map(id => ({x: nodes[id].x, y: nodes[id].y})),
+    endPct
+  ];
+}
+
+/* ── SVG 경로 그리기 ── */
+function drawPathOnMap(wrapper, startPct, endPct, floorName, delay) {
+  wrapper.querySelectorAll('.path-svg').forEach(s => s.remove());
+
+  const pts = findCorridorPath(floorName, startPct, endPct);
+  if (!pts || pts.length < 2) return;
+
+  // 경로 총 길이 계산 (viewBox 0-100 기준)
+  let totalLen = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const dx = pts[i].x - pts[i-1].x;
+    const dy = pts[i].y - pts[i-1].y;
+    totalLen += Math.sqrt(dx*dx + dy*dy);
+  }
+
+  const pointsStr = pts.map(p => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ');
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.classList.add('path-svg');
+  svg.setAttribute('viewBox', '0 0 100 100');
+  svg.setAttribute('preserveAspectRatio', 'none');
+
+  // 흰 배경선 (가독성용)
+  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+  bg.setAttribute('points', pointsStr);
+  bg.setAttribute('class', 'path-line-bg');
+
+  // 주황 경로선
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+  line.setAttribute('points', pointsStr);
+  line.setAttribute('class', 'path-line');
+  line.style.strokeDasharray = totalLen;
+  line.style.strokeDashoffset = totalLen;
+  line.style.transition = `stroke-dashoffset 1.4s ease ${delay||0}s`;
+
+  svg.appendChild(bg);
+  svg.appendChild(line);
+  wrapper.appendChild(svg);
+
+  // 애니메이션 트리거
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      line.style.strokeDashoffset = '0';
+    });
+  });
+}
+
+/* ── 퍼센트 문자열 → {x, y} ── */
+function posToPct(pos) {
+  return {
+    x: parseFloat(pos.left),
+    y: parseFloat(pos.top)
+  };
+}
+
+/* ── 경로 그리기 메인 ── */
+function renderPaths(src, dst, srcFloor, dstFloor, sameFloor) {
+  const dstPct = posToPct(dst);
+
+  if (!src) {
+    // 도착지만 있을 때: 엘리베이터→도착
+    const elevDst = elevators[dstFloor];
+    if (elevDst) {
+      drawPathOnMap(mapDestWrap, posToPct(elevDst), dstPct, dstFloor, 0.3);
+    }
+    return;
+  }
+
+  const srcPct  = posToPct(src);
+  const elevSrc = elevators[srcFloor];
+  const elevDst = elevators[dstFloor];
+
+  if (sameFloor) {
+    // 같은 층: 출발→도착 직접
+    drawPathOnMap(mapCurrentWrap, srcPct, dstPct, srcFloor, 0.3);
+  } else {
+    // 다른 층: 출발→엘리베이터 / 엘리베이터→도착
+    if (elevSrc) drawPathOnMap(mapCurrentWrap, srcPct, posToPct(elevSrc), srcFloor, 0.3);
+    if (elevDst) drawPathOnMap(mapDestWrap,    posToPct(elevDst), dstPct, dstFloor, 0.5);
+  }
+}
+
 /* ── 사전 프리캐시 ── */
 (function precache() {
   Object.values(maps).forEach(url => { const i = new Image(); i.src = url; });
@@ -1174,4 +1655,3 @@ function handleAdminClick(e) {
 </script>
 </body>
 </html>
-
