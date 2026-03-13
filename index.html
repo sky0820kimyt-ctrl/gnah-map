@@ -527,21 +527,32 @@
     pointer-events: none;
     overflow: visible;
   }
-  .path-line {
+  /* 1단: 진한 회색 복도선 (항상 표시) */
+  .path-line-road {
     fill: none;
-    stroke: var(--orange);
-    stroke-width: 1.8;
+    stroke: #555;
+    stroke-width: 5;
     stroke-linecap: round;
     stroke-linejoin: round;
-    opacity: 0.85;
+    opacity: 0.45;
   }
+  /* 2단: 흰 테두리 (선명도) */
   .path-line-bg {
     fill: none;
     stroke: #fff;
-    stroke-width: 4;
+    stroke-width: 3.2;
     stroke-linecap: round;
     stroke-linejoin: round;
-    opacity: 0.55;
+    opacity: 0.6;
+  }
+  /* 3단: 주황 이동선 (애니메이션) */
+  .path-line {
+    fill: none;
+    stroke: var(--orange);
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.95;
   }
 </style>
 </head>
@@ -810,7 +821,13 @@ const positions = {
   '성형외과':                 {floor:'신관 3층', top:'50.6%', left:'83.4%'},
   '치과':                     {floor:'신관 3층', top:'57.7%', left:'74.2%'},
   '정신건강의학과':           {floor:'신관 3층', top:'72.9%', left:'59.8%'},
-  '진료협력센터':             {floor:'신관 3층', top:'79%',   left:'34.3%'}
+  '진료협력센터':             {floor:'신관 3층', top:'79%',   left:'34.3%'},
+
+  '채혈실':                   {floor:'본관 3층', top:'58.4%', left:'66.9%'},
+  '수납(본관3층)':             {floor:'본관 3층', top:'79%',   left:'67.1%'},
+  '채혈실(신관2층)':           {floor:'신관 2층', top:'37%',   left:'10.5%'},
+  '수납(신관2층)':             {floor:'신관 2층', top:'48.2%', left:'10.9%'},
+  '수납(신관3층)':             {floor:'신관 3층', top:'87.5%', left:'49.4%'}
 };
 
 /* ── 별칭 ── */
@@ -1590,12 +1607,17 @@ function drawPathOnMap(wrapper, startPct, endPct, floorName, delay) {
   svg.setAttribute('viewBox', '0 0 100 100');
   svg.setAttribute('preserveAspectRatio', 'none');
 
-  // 흰 배경선 (가독성용)
+  // 1단: 진한 회색 복도선
+  const road = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+  road.setAttribute('points', pointsStr);
+  road.setAttribute('class', 'path-line-road');
+
+  // 2단: 흰 테두리 (가독성용)
   const bg = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
   bg.setAttribute('points', pointsStr);
   bg.setAttribute('class', 'path-line-bg');
 
-  // 주황 경로선
+  // 3단: 주황 이동선 (애니메이션)
   const line = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
   line.setAttribute('points', pointsStr);
   line.setAttribute('class', 'path-line');
@@ -1603,6 +1625,7 @@ function drawPathOnMap(wrapper, startPct, endPct, floorName, delay) {
   line.style.strokeDashoffset = totalLen;
   line.style.transition = `stroke-dashoffset 1.4s ease ${delay||0}s`;
 
+  svg.appendChild(road);
   svg.appendChild(bg);
   svg.appendChild(line);
   wrapper.appendChild(svg);
