@@ -106,16 +106,46 @@
   .floor-map{width:100%;height:auto;display:block;cursor:zoom-in;transition:transform .2s;}
   .floor-map:hover{transform:scale(1.005);}
 
-  /* 마커 */
-  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,140,66,.5)}70%{box-shadow:0 0 0 12px rgba(255,140,66,0)}100%{box-shadow:0 0 0 0 rgba(255,140,66,0)}}
-  @keyframes pulseGreen{0%{box-shadow:0 0 0 0 rgba(76,175,80,.5)}70%{box-shadow:0 0 0 12px rgba(76,175,80,0)}100%{box-shadow:0 0 0 0 rgba(76,175,80,0)}}
-  @keyframes pulseCopper{0%{box-shadow:0 0 0 0 rgba(184,115,51,.5)}70%{box-shadow:0 0 0 10px rgba(184,115,51,0)}100%{box-shadow:0 0 0 0 rgba(184,115,51,0)}}
-  @keyframes pulseMint{0%{box-shadow:0 0 0 0 rgba(0,150,136,.5)}70%{box-shadow:0 0 0 10px rgba(0,150,136,0)}100%{box-shadow:0 0 0 0 rgba(0,150,136,0)}}
-  .marker{position:absolute;border-radius:50%;z-index:10;transform:translate(-50%,-50%);}
-  .marker.start{width:22px;height:22px;background:#4caf50;animation:pulseGreen 1.4s infinite;}
-  .marker.end{width:26px;height:26px;background:var(--orange);animation:pulse 1.4s infinite;}
-  .marker.elevator{width:20px;height:20px;background:#b87333;animation:pulseCopper 1.4s infinite;}
-  .marker.connector{width:20px;height:20px;background:var(--mint);animation:pulseMint 1.4s infinite;}
+  /* 마커 — 핀 모양 (글자 가림 방지) */
+  @keyframes pinFloat{
+    0%,100%{ transform:translate(-50%,-100%) translateY(0); }
+    50%    { transform:translate(-50%,-100%) translateY(-4px); }
+  }
+  .marker {
+    position: absolute;
+    z-index: 10;
+    width: 24px;
+    height: 30px;
+    transform: translate(-50%, -100%);
+    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.30));
+    animation: pinFloat 2s ease-in-out infinite;
+  }
+  /* 핀 머리 */
+  .marker::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%) rotate(-45deg);
+    transform-origin: center;
+    width: 20px; height: 20px;
+    border-radius: 50% 50% 50% 0;
+    border: 2.5px solid rgba(255,255,255,0.85);
+    box-shadow: inset 0 0 0 3px rgba(255,255,255,0.2);
+  }
+  /* 핀 꼬리 그림자 */
+  .marker::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 8px; height: 4px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.18);
+  }
+  .marker.start::before    { background: #43a047; }
+  .marker.end::before      { background: var(--orange); }
+  .marker.elevator::before { background: #a0714f; }
+  .marker.connector::before{ background: #7c3aed; }
 
   /* 팝업 */
   #imagePopup{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:5000;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
@@ -216,7 +246,7 @@
   <div class="legend-item"><div class="legend-dot" style="background:#4caf50"></div>출발지</div>
   <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div>도착지</div>
   <div class="legend-item"><div class="legend-dot" style="background:#b87333"></div>엘리베이터·에스컬레이터</div>
-  <div class="legend-item"><div class="legend-dot" style="background:var(--mint)"></div>연결통로</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div>연결통로</div>
 </div>
 
 <div id="mapsContainer"></div>
@@ -264,8 +294,8 @@ const elevators = {
 };
 /* 각 층 지도에서 연결통로 위치 */
 const connectors = {
-  '본관 2층':{top:'47%',left:'93%'},
-  '본관 3층':{top:'47%',left:'93%'},
+  '본관 2층':{top:'44%',left:'94%'},
+  '본관 3층':{top:'57%',left:'94%'},
   '신관 2층':{top:'43%',left:'5%'},
   '신관 3층':{top:'44%',left:'5%'}
 };
