@@ -88,18 +88,108 @@
   /* 지도 컨테이너 */
   #mapsContainer{max-width:700px;width:100%;margin:0 auto;display:none;}
 
-  /* 단계 카드 */
-  .step-block{margin-bottom:8px;}
+  /* ── 경로 요약 바 ── */
+  .route-summary {
+    max-width:700px; margin:0 auto 16px; padding:14px 16px;
+    background:var(--card); border:1px solid var(--border);
+    border-radius:12px; box-shadow:var(--shadow);
+    display:flex; flex-wrap:wrap; align-items:center; gap:6px;
+  }
+  .route-summary-item {
+    display:flex; align-items:center; gap:5px;
+    font-size:13px; font-weight:600; color:var(--text);
+    background:var(--bg); border-radius:20px;
+    padding:5px 10px; border:1px solid var(--border);
+  }
+  .route-summary-item .rs-floor { font-size:11px; color:var(--text-sub); font-weight:400; }
+  .route-summary-arrow {
+    font-size:12px; color:var(--text-sub); padding:0 2px; flex-shrink:0;
+  }
+  .rs-transport {
+    display:inline-flex; align-items:center; gap:4px;
+    font-size:11.5px; color:#fff; font-weight:700;
+    padding:3px 8px; border-radius:20px; margin:0 2px;
+  }
+  .rs-transport.elev  { background:#a0714f; }
+  .rs-transport.conn  { background:#7c3aed; }
+  .rs-transport.walk  { background:#43a047; }
+
+  /* ── 진행 단계 바 ── */
+  .progress-bar {
+    max-width:700px; margin:0 auto 20px;
+    display:flex; align-items:center; padding:0 4px;
+  }
+  .pb-step {
+    display:flex; flex-direction:column; align-items:center;
+    gap:5px; flex:0 0 auto; cursor:pointer;
+  }
+  .pb-circle {
+    width:32px; height:32px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:700;
+    border:2.5px solid transparent;
+    transition:all .25s;
+  }
+  .pb-circle.inactive  { background:#f0f4f3; border-color:var(--border); color:var(--text-sub); }
+  .pb-circle.active    { background:var(--mint); border-color:var(--mint); color:#fff; box-shadow:0 0 0 4px rgba(0,150,136,.18); }
+  .pb-circle.done      { background:#c8e6c9; border-color:#81c784; color:#2e7d32; }
+  .pb-label {
+    font-size:10px; font-weight:600; color:var(--text-sub);
+    text-align:center; max-width:60px; line-height:1.3;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .pb-label.active { color:var(--mint); }
+  .pb-line {
+    flex:1; height:3px; margin:0 4px; margin-bottom:22px;
+    background:var(--border); border-radius:2px; transition:background .3s;
+  }
+  .pb-line.done { background:var(--mint); }
+
+  /* ── 단계 카드 ── */
+  .step-block { margin-bottom:8px; display:none; }
+  .step-block.active-step { display:block; }
+
+  /* 단일 지도(같은층/빠른검색)는 항상 표시 */
+  .step-block.always-show { display:block; }
+
   .step-heading{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:10px 14px;border-radius:10px;font-size:13.5px;font-weight:700;}
-  .step-num{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+  .step-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
   .step-heading.type-start{background:#e8f5e9;color:#2e7d32;} .step-heading.type-start .step-num{background:#4caf50;color:#fff;}
   .step-heading.type-mid{background:var(--mint-light);color:#00695c;} .step-heading.type-mid .step-num{background:var(--mint);color:#fff;}
   .step-heading.type-end{background:var(--orange-light);color:#e65100;} .step-heading.type-end .step-num{background:var(--orange);color:#fff;}
+
+  /* 이동수단 배지 */
+  .transport-badge {
+    display:inline-flex; align-items:center; gap:5px;
+    padding:6px 14px; border-radius:30px;
+    font-size:14px; font-weight:700;
+    margin:0 auto 12px; max-width:fit-content;
+  }
+  .transport-badge.walk  { background:#e8f5e9; color:#2e7d32; }
+  .transport-badge.elev  { background:#fdf3e3; color:#7d4e20; }
+  .transport-badge.conn  { background:#ede9fe; color:#5b21b6; }
+  .transport-badge-wrap  { display:flex; justify-content:center; margin-bottom:12px; }
+
   .step-desc{font-size:12.5px;color:var(--text-sub);margin-bottom:10px;padding:0 4px;line-height:1.6;}
 
-  /* 단계 사이 화살표 */
-  .step-connector{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 0;font-size:12px;color:var(--text-sub);font-weight:600;}
-  .step-connector-arrow{width:32px;height:32px;background:var(--mint-light);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--mint);flex-shrink:0;}
+  /* 다음 단계 버튼 */
+  .next-btn {
+    width:100%; margin-top:12px; padding:12px;
+    background:var(--mint); color:#fff;
+    border:none; border-radius:10px;
+    font-size:14px; font-weight:700; font-family:'Noto Sans KR',sans-serif;
+    cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+    transition:background .15s, transform .15s;
+  }
+  .next-btn:hover { background:#00796b; transform:translateY(-1px); }
+  .prev-btn {
+    width:100%; margin-top:6px; padding:10px;
+    background:transparent; color:var(--text-sub);
+    border:1.5px solid var(--border); border-radius:10px;
+    font-size:13px; font-weight:600; font-family:'Noto Sans KR',sans-serif;
+    cursor:pointer; transition:border-color .15s;
+  }
+  .prev-btn:hover { border-color:var(--mint); color:var(--mint); }
 
   /* 지도 */
   .map-wrapper{position:relative;width:100%;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.14);}
@@ -497,12 +587,25 @@ function clearInput(inputId,btnId,sugType){
 function updateBtnState(){const b=document.getElementById('btnRoute');if(b)b.disabled=!endInput.value.trim();}
 function updateSearchBtnState(){const b=document.getElementById('btnSearch');if(b)b.disabled=!searchInput.value.trim();}
 
+/* ── 이동수단 배지 정보 ── */
+function getTransportBadge(step){
+  if(!step.nextDesc) return null;
+  const t=step.nextDesc;
+  if(t.includes('연결통로')) return {cls:'conn', icon:'🔀', label:'연결통로 이동'};
+  if(t.includes('엘리베이터')||t.includes('에스컬레이터')) return {cls:'elev', icon:'🛗', label:'엘리베이터·에스컬레이터 이용'};
+  return {cls:'walk', icon:'🚶', label:'도보 이동'};
+}
+
 /* ── 지도 블록 생성 ── */
+let currentStepIndex = 0;
+let totalSteps = 0;
+
 function createMapBlock(step, index, total){
   const typeClass = index===0?'type-start':(index===total-1?'type-end':'type-mid');
   const block=document.createElement('div');
-  block.className='step-block fade-in';
-  block.style.animationDelay=(index*0.1)+'s';
+  block.id='step-block-'+index;
+  block.className='step-block fade-in'+(total===1?' always-show':'');
+  if(total>1 && index===0) block.classList.add('active-step');
 
   // 헤딩
   const heading=document.createElement('div');
@@ -538,14 +641,62 @@ function createMapBlock(step, index, total){
   });
   block.appendChild(wrapper);
 
-  // 다음 단계 화살표
-  if(index<total-1&&step.nextDesc){
-    const conn=document.createElement('div');
-    conn.className='step-connector';
-    conn.innerHTML=`<div class="step-connector-arrow">↓</div><span>${step.nextDesc}</span>`;
-    block.appendChild(conn);
+  // 이동수단 배지 + 다음/이전 버튼 (다단계일 때만)
+  if(total>1){
+    const badge=getTransportBadge(step);
+    if(badge){
+      const bwrap=document.createElement('div');
+      bwrap.className='transport-badge-wrap';
+      bwrap.innerHTML=`<div class="transport-badge ${badge.cls}">${badge.icon} ${badge.label}</div>`;
+      block.appendChild(bwrap);
+    }
+    if(index<total-1){
+      const nb=document.createElement('button');
+      nb.className='next-btn';
+      nb.innerHTML=`다음 단계 <span style="font-size:16px">→</span>`;
+      nb.onclick=()=>goToStep(index+1, total);
+      block.appendChild(nb);
+    }
+    if(index>0){
+      const pb=document.createElement('button');
+      pb.className='prev-btn';
+      pb.innerHTML='← 이전 단계';
+      pb.onclick=()=>goToStep(index-1, total);
+      block.appendChild(pb);
+    }
   }
   return block;
+}
+
+/* ── 단계 이동 ── */
+function goToStep(idx, total){
+  currentStepIndex=idx;
+  for(let i=0;i<total;i++){
+    const b=document.getElementById('step-block-'+i);
+    if(!b) continue;
+    b.classList.remove('active-step');
+    if(i===idx) b.classList.add('active-step');
+  }
+  // 진행바 업데이트
+  updateProgressBar(idx, total);
+  // 스크롤
+  const pb=document.getElementById('routeProgressBar');
+  if(pb) pb.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* ── 진행바 업데이트 ── */
+function updateProgressBar(activeIdx, total){
+  const bar=document.getElementById('routeProgressBar');
+  if(!bar) return;
+  bar.querySelectorAll('.pb-circle').forEach((c,i)=>{
+    c.className='pb-circle '+(i<activeIdx?'done':i===activeIdx?'active':'inactive');
+  });
+  bar.querySelectorAll('.pb-label').forEach((l,i)=>{
+    l.className='pb-label'+(i===activeIdx?' active':'');
+  });
+  bar.querySelectorAll('.pb-line').forEach((l,i)=>{
+    l.className='pb-line'+(i<activeIdx?' done':'');
+  });
 }
 
 /* ── 경로 단계 계산 ── */
@@ -647,7 +798,43 @@ function getRouteSteps(src,dst,srcFloor,dstFloor){
 function renderSteps(steps){
   mapsContainer.innerHTML='';
   mapsContainer.style.display='block';
-  steps.forEach((step,i)=>mapsContainer.appendChild(createMapBlock(step,i,steps.length)));
+  currentStepIndex=0;
+  totalSteps=steps.length;
+  const total=steps.length;
+
+  if(total>1){
+    // 경로 요약 바
+    const summary=document.createElement('div');
+    summary.className='route-summary fade-in';
+    let summaryHTML='';
+    steps.forEach((step,i)=>{
+      const badge=getTransportBadge(step);
+      summaryHTML+=`<div class="route-summary-item">${step.icon} <span class="rs-floor">${step.floorLabel}</span></div>`;
+      if(badge) summaryHTML+=`<span class="route-summary-arrow">→</span><span class="rs-transport ${badge.cls}">${badge.icon}</span><span class="route-summary-arrow">→</span>`;
+    });
+    summary.innerHTML=summaryHTML;
+    mapsContainer.appendChild(summary);
+
+    // 진행 단계 바
+    const bar=document.createElement('div');
+    bar.className='progress-bar fade-in';
+    bar.id='routeProgressBar';
+    steps.forEach((step,i)=>{
+      const node=document.createElement('div');
+      node.className='pb-step';
+      node.onclick=()=>goToStep(i,total);
+      node.innerHTML=`<div class="pb-circle ${i===0?'active':'inactive'}">${i+1}</div><div class="pb-label${i===0?' active':''}">${step.floorLabel}</div>`;
+      bar.appendChild(node);
+      if(i<total-1){
+        const line=document.createElement('div');
+        line.className='pb-line';
+        bar.appendChild(line);
+      }
+    });
+    mapsContainer.appendChild(bar);
+  }
+
+  steps.forEach((step,i)=>mapsContainer.appendChild(createMapBlock(step,i,total)));
 }
 
 /* ── 빠른 위치 찾기 ── */
