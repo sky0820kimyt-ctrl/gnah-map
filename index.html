@@ -410,12 +410,6 @@
   <div class="legend-item"><div class="legend-dot" style="background:#b87333;"></div>엘리베이터</div>
 </div>
 
-<!-- AI 경로 분석 중 표시 -->
-<div id="aiThinking" class="ai-thinking">
-  <div class="ai-dot"></div>
-  AI가 복도 경로를 분석하고 있어요…
-</div>
-
 <!-- 지도 영역 -->
 <div id="mapsContainer">
   <!-- 지도 탭 (다른 층일 때만 노출) -->
@@ -768,7 +762,7 @@ function scrollToResult() {
   setTimeout(() => resultChip.scrollIntoView({behavior:'smooth',block:'start'}), 120);
 }
 function showResult(title, body, isOrange) {
-  chipTitle.innerHTML = title + (isOrange ? '' : ' <span class="ai-badge">✦ AI 경로</span>');
+  chipTitle.textContent = title;
   chipBody.textContent  = body;
   resultChip.className  = 'result-chip' + (isOrange?' orange-accent':'') + ' fade-in';
   resultChip.style.display = 'block';
@@ -863,7 +857,7 @@ function navigateRoute() {
   waitImagesLoaded([mapImageCurrent, mapImageDest], async () => {
     hideLoading();
     triggerFadeIn(mapsContainer);
-    await renderPaths(src, dst, currentFloor, dstFloor, sameFloor);
+    renderPaths(src, dst, currentFloor, dstFloor, sameFloor);
   });
 }
 
@@ -1072,94 +1066,41 @@ function findCorridorPath(floorName, startPct, endPct) {
 }
 
 /* ══════════════════════════════════════
-   AI 경로 탐색
+   경로 그리기
 ══════════════════════════════════════ */
-const aiPathCache = {};   // "floorName|sx|sy|ex|ey" → [{x,y},...]
-const aiThinkingEl = document.getElementById('aiThinking');
+function drawPathOnMap(wrapper, startPct, endPct, floorName, delay) {
+  wrapper.querySelectorAll('.path-svg').forEach(s => s.remove());
+  const pts = findCorridorPath(floorName, startPct, endPct);
+  if (!pts || pts.length < 2) return;
 
-async function getAIPath(floorName, startPct, endPct) {
-  const key = `${floorName}|${startPct.x.toFixed(1)}|${startPct.y.toFixed(1)}|${endPct.x.toFixed(1)}|${endPct.y.toFixed(1)}`;
-  if (aiPathCache[key]) return aiPathCache[key];
+  let len = 0;
+  for (let i = 1; i < pts.length; i++)
+    len += Math.sqrt((pts[i].x-pts[i-1].x)**2 + (pts[i].y-pts[i-1].y)**2);
 
-  const imgUrl = maps[floorName];
-
-  const prompt =
-    `이것은 강릉아산병원 ${floorName} 평면도입니다.\n` +
-    `이미지에서 회색(진한 회색/밝은 회색) 선이 실제 복도입니다.\n\n` +
-    `출발점: 이미지 왼쪽에서 ${startPct.x.toFixed(1)}%, 위에서 ${startPct.y.toFixed(1)}% 위치\n` +
-    `도착점: 이미지 왼쪽에서 ${endPct.x.toFixed(1)}%, 위에서 ${endPct.y.toFixed(1)}% 위치\n\n` +
-    `규칙:\n` +
-    `1. 반드시 회색 복도 선 위만 따라가세요\n` +
-    `2. 벽이나 방 내부는 통과하지 마세요\n` +
-    `3. 복도가 꺾이는 모든 교차점을 경유점으로 추가하세요\n` +
-    `4. 좌표는 이미지 전체 크기 기준 퍼센트(0~100)입니다\n\n` +
-    `출발점 → 복도 경유점들 → 도착점 순서로 JSON 배열만 반환하세요.\n` +
-    `형식: [{"x":숫자,"y":숫자},...]\n` +
-    `JSON 외 다른 텍스트, 마크다운 없음.`;
-
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'url', url: imgUrl } },
-            { type: 'text',  text: prompt }
-          ]
-        }]
-      })
-    });
-    const data = await res.json();
-    const raw  = (data.content||[]).find(b=>b.type==='text')?.text || '[]';
-    const clean = raw.replace(/```json|```/g,'').trim();
-    const pts   = JSON.parse(clean);
-    if (Array.isArray(pts) && pts.length >= 2) {
-      aiPathCache[key] = pts;
-      return pts;
-    }
-  } catch(e) {
-    console.warn('AI 경로 실패, 기본 BFS 사용:', e);
-  }
-  // fallback: BFS
-  return findCorridorPath(floorName, startPct, endPct);
-}
-
-/* SVG 선 그리기 (pts 배열 받아서 그림) */
-function drawSVGPath(wrapper, pts, delay) {
-  if (!pts||pts.length<2) return;
-  let len=0;
-  for(let i=1;i<pts.length;i++) len+=Math.sqrt((pts[i].x-pts[i-1].x)**2+(pts[i].y-pts[i-1].y)**2);
-  const ps = pts.map(p=>`${(+p.x).toFixed(2)},${(+p.y).toFixed(2)}`).join(' ');
+  const ps = pts.map(p => `${(+p.x).toFixed(2)},${(+p.y).toFixed(2)}`).join(' ');
   const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
   svg.classList.add('path-svg');
   svg.setAttribute('viewBox','0 0 100 100');
   svg.setAttribute('preserveAspectRatio','none');
+
   const road = document.createElementNS('http://www.w3.org/2000/svg','polyline');
-  road.setAttribute('points',ps); road.setAttribute('class','path-line-road');
+  road.setAttribute('points', ps); road.setAttribute('class','path-line-road');
+
   const bg = document.createElementNS('http://www.w3.org/2000/svg','polyline');
-  bg.setAttribute('points',ps); bg.setAttribute('class','path-line-bg');
+  bg.setAttribute('points', ps); bg.setAttribute('class','path-line-bg');
+
   const line = document.createElementNS('http://www.w3.org/2000/svg','polyline');
-  line.setAttribute('points',ps); line.setAttribute('class','path-line');
+  line.setAttribute('points', ps); line.setAttribute('class','path-line');
   line.style.strokeDasharray  = len;
   line.style.strokeDashoffset = len;
   line.style.transition = `stroke-dashoffset 1.4s ease ${delay||0}s`;
+
   svg.appendChild(road); svg.appendChild(bg); svg.appendChild(line);
   wrapper.appendChild(svg);
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{ line.style.strokeDashoffset='0'; }));
+  requestAnimationFrame(() => requestAnimationFrame(() => { line.style.strokeDashoffset = '0'; }));
 }
 
-/* AI 경로 그리기 (async) */
-async function drawPathOnMap(wrapper, startPct, endPct, floorName, delay) {
-  wrapper.querySelectorAll('.path-svg').forEach(s=>s.remove());
-  const pts = await getAIPath(floorName, startPct, endPct);
-  drawSVGPath(wrapper, pts, delay);
-}
-
-function posToPct(pos) { return {x:parseFloat(pos.left), y:parseFloat(pos.top)}; }
+function posToPct(pos) { return {x: parseFloat(pos.left), y: parseFloat(pos.top)}; }
 
 /* 본관↔신관 연결통로 */
 const connectorPos = {
@@ -1167,45 +1108,41 @@ const connectorPos = {
   '본관 3층':{x:97,y:47}, '신관 3층':{x:2,y:44}
 };
 function getBridgeFloor(srcFloor, dstFloor) {
-  if (srcFloor.includes('본관')===dstFloor.includes('본관')) return null;
-  return (srcFloor.includes('3층')||dstFloor.includes('3층')) ? '3층' : '2층';
+  if (srcFloor.includes('본관') === dstFloor.includes('본관')) return null;
+  return (srcFloor.includes('3층') || dstFloor.includes('3층')) ? '3층' : '2층';
 }
 
-async function renderPaths(src, dst, srcFloor, dstFloor, sameFloor) {
-  aiThinkingEl.classList.add('show');
+function renderPaths(src, dst, srcFloor, dstFloor, sameFloor) {
   const dstPct = posToPct(dst);
 
-  try {
-    if (!src) {
-      const e = elevators[dstFloor];
-      if (e) await drawPathOnMap(mapDestWrap, posToPct(e), dstPct, dstFloor, 0.3);
-    } else {
-      const srcPct       = posToPct(src);
-      const srcBuilding  = srcFloor.includes('본관') ? '본관' : '신관';
-      const dstBuilding  = dstFloor.includes('본관') ? '본관' : '신관';
-      const diffBuilding = srcBuilding !== dstBuilding;
-      const elevSrc = elevators[srcFloor];
-      const elevDst = elevators[dstFloor];
+  if (!src) {
+    const e = elevators[dstFloor];
+    if (e) drawPathOnMap(mapDestWrap, posToPct(e), dstPct, dstFloor, 0.3);
+    return;
+  }
 
-      if (sameFloor) {
-        await drawPathOnMap(mapCurrentWrap, srcPct, dstPct, srcFloor, 0.3);
-      } else if (!diffBuilding) {
-        if (elevSrc) await drawPathOnMap(mapCurrentWrap, srcPct, posToPct(elevSrc), srcFloor, 0.3);
-        if (elevDst) await drawPathOnMap(mapDestWrap, posToPct(elevDst), dstPct, dstFloor, 0.5);
-      } else {
-        const bl  = getBridgeFloor(srcFloor, dstFloor);
-        const sbk = srcBuilding+' '+bl;
-        const dbk = dstBuilding+' '+bl;
-        const sc  = connectorPos[sbk];
-        const dc  = connectorPos[dbk];
-        if (srcFloor===sbk) { if (sc) await drawPathOnMap(mapCurrentWrap, srcPct, sc, srcFloor, 0.3); }
-        else                { if (elevSrc) await drawPathOnMap(mapCurrentWrap, srcPct, posToPct(elevSrc), srcFloor, 0.3); }
-        if (dstFloor===dbk) { if (dc) await drawPathOnMap(mapDestWrap, dc, dstPct, dstFloor, 0.5); }
-        else                { if (elevDst) await drawPathOnMap(mapDestWrap, posToPct(elevDst), dstPct, dstFloor, 0.5); }
-      }
-    }
-  } finally {
-    aiThinkingEl.classList.remove('show');
+  const srcPct       = posToPct(src);
+  const srcBuilding  = srcFloor.includes('본관') ? '본관' : '신관';
+  const dstBuilding  = dstFloor.includes('본관') ? '본관' : '신관';
+  const diffBuilding = srcBuilding !== dstBuilding;
+  const elevSrc = elevators[srcFloor];
+  const elevDst = elevators[dstFloor];
+
+  if (sameFloor) {
+    drawPathOnMap(mapCurrentWrap, srcPct, dstPct, srcFloor, 0.3);
+  } else if (!diffBuilding) {
+    if (elevSrc) drawPathOnMap(mapCurrentWrap, srcPct, posToPct(elevSrc), srcFloor, 0.3);
+    if (elevDst) drawPathOnMap(mapDestWrap, posToPct(elevDst), dstPct, dstFloor, 0.5);
+  } else {
+    const bl  = getBridgeFloor(srcFloor, dstFloor);
+    const sbk = srcBuilding + ' ' + bl;
+    const dbk = dstBuilding + ' ' + bl;
+    const sc  = connectorPos[sbk];
+    const dc  = connectorPos[dbk];
+    if (srcFloor === sbk) { if (sc) drawPathOnMap(mapCurrentWrap, srcPct, sc, srcFloor, 0.3); }
+    else { if (elevSrc) drawPathOnMap(mapCurrentWrap, srcPct, posToPct(elevSrc), srcFloor, 0.3); }
+    if (dstFloor === dbk) { if (dc) drawPathOnMap(mapDestWrap, dc, dstPct, dstFloor, 0.5); }
+    else { if (elevDst) drawPathOnMap(mapDestWrap, posToPct(elevDst), dstPct, dstFloor, 0.5); }
   }
 }
 
