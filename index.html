@@ -292,6 +292,14 @@ const elevators = {
   '신관 2층':{top:'69.9%',left:'33.1%'},
   '신관 3층':{top:'65.8%',left:'36%'}
 };
+/* 에스컬레이터 위치 (있는 층만) */
+const escalators = {
+  '본관 3층':  {top:'78%', left:'47%'},
+  '신관 1층':  {top:'58%', left:'36%'},
+  '신관 2층':  {top:'78%', left:'25%'},
+  '신관 3층':  {top:'78%', left:'25%'}
+};
+
 /* 각 층 지도에서 연결통로 위치 */
 const connectors = {
   '본관 2층':{top:'44%',left:'94%'},
@@ -538,6 +546,14 @@ function createMapBlock(step, index, total){
 }
 
 /* ── 경로 단계 계산 ── */
+/* 해당 층의 엘리베이터·에스컬레이터 마커 목록 반환 */
+function getTransportMarkers(floor){
+  const result=[];
+  if(elevators[floor])  result.push({type:'elevator',pos:elevators[floor]});
+  if(escalators[floor]) result.push({type:'elevator',pos:escalators[floor]});
+  return result;
+}
+
 function getBridgeFloor(srcFloor,dstFloor){
   if(srcFloor.includes('3층')||dstFloor.includes('3층'))return'3층';
   return'2층';
@@ -568,10 +584,9 @@ function getRouteSteps(src,dst,srcFloor,dstFloor){
 
   /* 같은 건물, 다른 층 */
   if(sameBuilding){
-    const elev=elevators[srcFloor];
     steps.push({floor:srcFloor,floorLabel:srcFloor,icon:'🟢',
       desc:'갈색 마커(엘리베이터·에스컬레이터)를 이용해 '+dstFloor+'으로 이동하세요.',
-      markers:[{type:'start',pos:src},...(elev?[{type:'elevator',pos:elev}]:[])],
+      markers:[{type:'start',pos:src},...getTransportMarkers(srcFloor)],
       nextDesc:'엘리베이터·에스컬레이터 탑승 → '+dstFloor});
     steps.push({floor:dstFloor,floorLabel:dstFloor,icon:'🟠',
       desc:'주황색 마커가 목적지예요.',
@@ -593,10 +608,9 @@ function getRouteSteps(src,dst,srcFloor,dstFloor){
       nextDesc:bl+' 연결통로 → '+dstBuilding+'으로 이동'});
   } else {
     /* 엘리베이터 타고 연결통로 층으로 */
-    const elev=elevators[srcFloor];
     steps.push({floor:srcFloor,floorLabel:srcFloor,icon:'🟢',
-      desc:'먼저 갈색 마커(엘리베이터)를 타고 '+srcBridge+'으로 이동하세요.',
-      markers:[{type:'start',pos:src},...(elev?[{type:'elevator',pos:elev}]:[])],
+      desc:'먼저 갈색 마커(엘리베이터·에스컬레이터)를 타고 '+srcBridge+'으로 이동하세요.',
+      markers:[{type:'start',pos:src},...getTransportMarkers(srcFloor)],
       nextDesc:'엘리베이터 탑승 → '+srcBridge});
     const conn=connectors[srcBridge];
     steps.push({floor:srcBridge,floorLabel:srcBridge,icon:'🔀',
@@ -614,10 +628,9 @@ function getRouteSteps(src,dst,srcFloor,dstFloor){
   } else {
     /* 연결통로 진입 후 엘리베이터 필요 */
     const conn=connectors[dstBridge];
-    const bridgeElev=elevators[dstBridge];
     steps.push({floor:dstBridge,floorLabel:dstBridge,icon:'🔀',
-      desc:'연결통로로 진입 후 갈색 마커(엘리베이터)를 타고 '+dstFloor+'으로 이동하세요.',
-      markers:[...(conn?[{type:'connector',pos:conn}]:[]),...(bridgeElev?[{type:'elevator',pos:bridgeElev}]:[])],
+      desc:'연결통로로 진입 후 갈색 마커(엘리베이터·에스컬레이터)를 타고 '+dstFloor+'으로 이동하세요.',
+      markers:[...(conn?[{type:'connector',pos:conn}]:[]),...getTransportMarkers(dstBridge)],
       nextDesc:'엘리베이터 탑승 → '+dstFloor});
     steps.push({floor:dstFloor,floorLabel:dstFloor,icon:'🟠',
       desc:'주황색 마커가 목적지예요.',
