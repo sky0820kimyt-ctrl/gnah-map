@@ -794,6 +794,7 @@ function searchPlace() {
    경로 안내
 ══════════════════════════════════════ */
 function navigateRoute() {
+  const sVal = startInput.value.trim();
   const eVal = endInput.value.trim();
   if (!eVal) { showResult('⚠️ 안내','도착지를 입력해주세요.',false); mapsContainer.style.display='none'; legendBox.style.display='none'; return; }
 
