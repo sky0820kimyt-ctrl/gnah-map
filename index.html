@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v15</title>
+<title>강릉아산병원 안내지도 v16</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
@@ -804,19 +804,24 @@ function getRouteSteps(src,dst,srcFloor,dstFloor){
   if(sameFloor){
     steps.push({floor:srcFloor,floorLabel:srcFloor,icon:'🟢',
       desc:'같은 층이에요! 초록색 → 출발지, 주황색 → 도착지',
-      markers:[{type:'start',pos:src},{type:'end',pos:dst}]});
+      markers:[{type:'start',pos:src},{type:'end',pos:dst}],
+      pathFrom:src, pathTo:dst});
     return steps;
   }
 
   /* 같은 건물, 다른 층 */
   if(sameBuilding){
+    const _elevSrc=elevators[srcFloor]||escalators[srcFloor];
     steps.push({floor:srcFloor,floorLabel:srcFloor,icon:'🟢',
       action:{type:'elev', label:'엘리베이터·에스컬레이터 이용', dest:dstFloor, sub:'갈색 마커 위치로 이동 후 탑승'},
       markers:[{type:'start',pos:src},...getTransportMarkers(srcFloor)],
+      pathFrom:src, pathTo:_elevSrc||src,
       nextDesc:'엘리베이터·에스컬레이터 탑승 → '+dstFloor});
+    const _elevDst=elevators[dstFloor]||escalators[dstFloor];
     steps.push({floor:dstFloor,floorLabel:dstFloor,icon:'🟠',
       action:{type:'end', label:'목적지 도착', dest:'주황색 핀 위치', sub:'주황색 마커가 목적지예요'},
-      markers:[{type:'end',pos:dst}]});
+      markers:[{type:'end',pos:dst}],
+      pathFrom:_elevDst||dst, pathTo:dst});
     return steps;
   }
 
@@ -831,17 +836,22 @@ function getRouteSteps(src,dst,srcFloor,dstFloor){
     steps.push({floor:srcFloor,floorLabel:srcFloor,icon:'🟢',
       action:{type:'conn', label:'연결통로 이동', dest:dstBuilding+' '+bl, sub:'보라색 마커 방향으로 이동'},
       markers:[{type:'start',pos:src},...(conn?[{type:'connector',pos:conn}]:[])],
+      pathFrom:src, pathTo:conn||src,
       nextDesc:bl+' 연결통로 → '+dstBuilding+'으로 이동'});
   } else {
     /* 엘리베이터 타고 연결통로 층으로 */
+    const _e2=elevators[srcFloor]||escalators[srcFloor];
     steps.push({floor:srcFloor,floorLabel:srcFloor,icon:'🟢',
       action:{type:'elev', label:'엘리베이터·에스컬레이터 이용', dest:srcBridge, sub:'갈색 마커 위치로 이동 후 탑승'},
       markers:[{type:'start',pos:src},...getTransportMarkers(srcFloor)],
+      pathFrom:src, pathTo:_e2||src,
       nextDesc:'엘리베이터 탑승 → '+srcBridge});
     const conn=connectors[srcBridge];
+    const _e3=elevators[srcBridge]||escalators[srcBridge];
     steps.push({floor:srcBridge,floorLabel:srcBridge,icon:'🔀',
       action:{type:'conn', label:'연결통로 이동', dest:dstBuilding+' '+bl, sub:'보라색 마커 방향으로 이동'},
       markers:[...(conn?[{type:'connector',pos:conn}]:[])],
+      pathFrom:_e3||conn, pathTo:conn||_e3,
       nextDesc:bl+' 연결통로 → '+dstBuilding+'으로 이동'});
   }
 
@@ -850,17 +860,22 @@ function getRouteSteps(src,dst,srcFloor,dstFloor){
     const conn=connectors[dstBridge];
     steps.push({floor:dstFloor,floorLabel:dstFloor,icon:'🟠',
       action:{type:'end', label:'목적지 도착', dest:'주황색 핀 위치', sub:'연결통로 진입 후 주황색 마커 방향으로 이동'},
-      markers:[...(conn?[{type:'connector',pos:conn}]:[]),{type:'end',pos:dst}]});
+      markers:[...(conn?[{type:'connector',pos:conn}]:[]),{type:'end',pos:dst}],
+      pathFrom:conn||dst, pathTo:dst});
   } else {
     /* 연결통로 진입 후 엘리베이터 필요 */
     const conn=connectors[dstBridge];
+    const _e4=elevators[dstBridge]||escalators[dstBridge];
     steps.push({floor:dstBridge,floorLabel:dstBridge,icon:'🔀',
       action:{type:'elev', label:'엘리베이터·에스컬레이터 이용', dest:dstFloor, sub:'연결통로 진입 후 갈색 마커 위치로 이동'},
       markers:[...(conn?[{type:'connector',pos:conn}]:[]),...getTransportMarkers(dstBridge)],
+      pathFrom:conn||_e4, pathTo:_e4||conn,
       nextDesc:'엘리베이터 탑승 → '+dstFloor});
+    const _e5=elevators[dstFloor]||escalators[dstFloor];
     steps.push({floor:dstFloor,floorLabel:dstFloor,icon:'🟠',
       action:{type:'end', label:'목적지 도착', dest:'주황색 핀 위치', sub:'주황색 마커가 목적지예요'},
-      markers:[{type:'end',pos:dst}]});
+      markers:[{type:'end',pos:dst}],
+      pathFrom:_e5||dst, pathTo:dst});
   }
 
   return steps;
