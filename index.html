@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v19</title>
+<title>강릉아산병원 안내지도 v20</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
@@ -884,24 +884,49 @@ function nearestNode(nodes, px, py){
   return best;
 }
 
-/* BFS 최단경로 */
-function bfsPath(nodes, edges, sId, eId){
+/* 거리 기반 다익스트라 (BFS 대체) — 홉 수가 아닌 실제 거리로 최단경로 탐색 */
+function dijkstra(nodes, edges, sId, eId){
   if(sId===eId) return [sId];
+
+  // 인접 리스트 구성
   const adj={};
   Object.keys(nodes).forEach(id=>adj[id]=[]);
-  edges.forEach(([a,b])=>{adj[a].push(b);adj[b].push(a);});
-  const vis={[sId]:null};
-  const q=[sId];
-  let found=false;
-  while(q.length&&!found){
-    const cur=q.shift();
-    if(cur===eId){found=true;break;}
-    (adj[cur]||[]).forEach(nb=>{if(!(nb in vis)){vis[nb]=cur;q.push(nb);}});
+  edges.forEach(([a,b])=>{
+    const dx=nodes[a].x-nodes[b].x, dy=nodes[a].y-nodes[b].y;
+    const w=Math.sqrt(dx*dx+dy*dy);
+    adj[a].push({id:b,w}); adj[b].push({id:a,w});
+  });
+
+  // 다익스트라
+  const dist={};
+  const prev={};
+  Object.keys(nodes).forEach(id=>{dist[id]=Infinity; prev[id]=null;});
+  dist[sId]=0;
+
+  // 미니힙 대신 단순 정렬 배열 (노드 수 적으므로 충분)
+  const unvisited=new Set(Object.keys(nodes));
+
+  while(unvisited.size>0){
+    // 현재 최소 거리 노드 선택
+    let cur=null;
+    unvisited.forEach(id=>{
+      if(cur===null||dist[id]<dist[cur]) cur=id;
+    });
+    if(cur===null||dist[cur]===Infinity) break;
+    if(cur===eId) break;
+    unvisited.delete(cur);
+
+    adj[cur].forEach(({id:nb,w})=>{
+      if(!unvisited.has(nb)) return;
+      const alt=dist[cur]+w;
+      if(alt<dist[nb]){dist[nb]=alt;prev[nb]=cur;}
+    });
   }
-  if(!found) return null;
+
+  if(dist[eId]===Infinity) return null;
   const path=[];
   let cur=eId;
-  while(cur!==null){path.unshift(cur);cur=vis[cur];}
+  while(cur!==null){path.unshift(cur);cur=prev[cur];}
   return path;
 }
 
@@ -911,7 +936,7 @@ function getCorridorPoints(floor, fromPct, toPct){
   if(!g) return [fromPct, toPct];
   const sId=nearestNode(g.nodes, fromPct.x, fromPct.y);
   const eId=nearestNode(g.nodes, toPct.x,   toPct.y);
-  const ids=bfsPath(g.nodes, g.edges, sId, eId);
+  const ids=dijkstra(g.nodes, g.edges, sId, eId);
   if(!ids) return [fromPct, toPct];
   return [fromPct, ...ids.map(id=>({x:g.nodes[id].x,y:g.nodes[id].y})), toPct];
 }
