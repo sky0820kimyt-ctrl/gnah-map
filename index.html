@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v24</title>
+<title>강릉아산병원 안내지도 v25</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
@@ -795,33 +795,31 @@ const corridorGraph = {
   ───────────────────────────────────────── */
   '본관 3층': {
     nodes: {
-      // 상단 복도 (y=22)
-      T1:{x:18.5,y:22}, T2:{x:35.7,y:22},
-      T4:{x:57.9,y:22}, T5:{x:80,y:22}, T6:{x:79.5,y:12.2},
+      // 상단 복도 (y=22) — 핵심 교차점만
+      T1:{x:18.5,y:22}, T2:{x:36,y:22},
+      T4:{x:58,y:22},   T5:{x:80,y:22},
       // 중단 복도 (y=49) — 엘리베이터/채혈실 라인
-      M1:{x:14.3,y:49}, M2:{x:18.2,y:49}, M3:{x:36,y:49},
-      M4:{x:46.2,y:49}, M5:{x:57.9,y:49}, M6:{x:62.7,y:49}, M7:{x:79.5,y:49},
-      // 엘리베이터·에스컬레이터 노드 (실제 위치 — 중단에서 직접 연결)
-      EV:{x:46.4,y:56},  ES:{x:68.1,y:74.6},
-      // 하단 복도 (y=63) — 신관 연결 라인
-      L0:{x:5,y:63},   L1:{x:14.6,y:63}, L2:{x:32.1,y:63},
-      L3:{x:46.2,y:63}, L4:{x:55.4,y:63}, L5:{x:62.3,y:63},
-      L6:{x:65.9,y:63}, L7:{x:79.5,y:63}, L8:{x:94.4,y:63}
+      M1:{x:14,y:49},  M2:{x:18,y:49},  M3:{x:36,y:49},
+      M4:{x:46,y:49},  M5:{x:58,y:49},  M6:{x:63,y:49},  M7:{x:80,y:49},
+      // 엘리베이터 노드 (중단↔하단 연결)
+      EV:{x:46,y:56},
+      // 하단 복도 (y=63) — 신관 연결
+      L0:{x:5,y:63},   L1:{x:15,y:63},  L2:{x:32,y:63},
+      L3:{x:46,y:63},  L4:{x:58,y:63},  L5:{x:63,y:63},
+      L7:{x:80,y:63},  L8:{x:94,y:63}
     },
     edges:[
-      // 상단 수평
-      ['T1','T2'],['T2','T4'],['T4','T5'],['T5','T6'],
-      // 중단 수평
+      // 상단 수평 (이어진 하나의 선)
+      ['T1','T2'],['T2','T4'],['T4','T5'],
+      // 중단 수평 (이어진 하나의 선)
       ['M1','M2'],['M2','M3'],['M3','M4'],['M4','M5'],['M5','M6'],['M6','M7'],
       // 하단 수평
-      ['L0','L1'],['L1','L2'],['L2','L3'],['L3','L4'],['L4','L5'],
-      ['L5','L6'],['L6','L7'],['L7','L8'],
-      // 엘리베이터·에스컬레이터 세로 연결 (중단↔실제위치↔하단)
+      ['L0','L1'],['L1','L2'],['L2','L3'],['L3','L4'],['L4','L5'],['L5','L7'],['L7','L8'],
+      // 엘리베이터 세로 (중단↔EV↔하단)
       ['M4','EV'],['EV','L3'],
-      ['M6','ES'],['ES','L5'],
-      // 세로 (상단↔중단)
+      // 기타 세로 (상단↔중단)
       ['T1','M2'],['T2','M3'],['T4','M5'],['T5','M7'],
-      // 세로 (중단↔하단)
+      // 기타 세로 (중단↔하단)
       ['M1','L1'],['M3','L2'],['M7','L7']
     ]
   },
@@ -832,32 +830,36 @@ const corridorGraph = {
   ───────────────────────────────────────── */
   '본관 2층': {
     nodes: {
-      // 상단 복도 (y=25)
-      U1:{x:26.5,y:25}, U2:{x:36.2,y:25}, U3:{x:45.7,y:25},
-      U4:{x:75.9,y:25}, U5:{x:90,y:25},
-      // 엘리베이터·에스컬레이터 노드 (실제 위치)
-      EV:{x:48.8,y:37},  ES:{x:36.2,y:21.6},
-      // 메인 복도 (y=39, 신관 연결 포함)
-      M0:{x:2.2,y:39},  M1:{x:26.3,y:39}, M2:{x:36,y:39},
-      M3:{x:41.3,y:39}, M4:{x:45.7,y:39}, M5:{x:68.6,y:39}, M6:{x:75.4,y:39},
-      // 하단 복도 (CT3·다학제)
-      L1:{x:46.9,y:76.5},L2:{x:68.3,y:76.8}
+      // 신관 연결 왼쪽 끝
+      W:{x:2.2, y:39},
+      // 에스컬레이터 구역 (x≈36)
+      A:{x:36, y:25},  // 에스컬레이터 위 복도
+      B:{x:36, y:39},  // 에스컬레이터 아래 복도 교차점
+      // 엘리베이터 구역 (x≈46~49)
+      C:{x:46, y:25},  // 엘리베이터 위 복도
+      EV:{x:48.8,y:37},// 엘리베이터 실제 위치
+      D:{x:46, y:39},  // 엘리베이터 아래 복도 교차점
+      // 영상의학과 구역 (x≈69~76)
+      E:{x:69, y:39},  // 영상의학 교차점
+      F:{x:76, y:25},  // 재활의학과 복도
+      G:{x:76, y:39},  // 투시촬영실 교차점
+      // 하단 (y≈77)
+      H:{x:47, y:77},  // 다학제
+      I:{x:69, y:77}   // CT3
     },
     edges:[
-      // 상단 수평
-      ['U1','U2'],['U2','U3'],['U3','U4'],['U4','U5'],
-      // 에스컬레이터 연결 (상단↔실제위치↔상단복도)
-      ['U2','ES'],['ES','U3'],
-      // 엘리베이터 연결 (상단↔실제위치↔메인)
-      ['U3','EV'],['EV','M4'],
-      // 메인 수평
-      ['M0','M1'],['M1','M2'],['M2','M3'],['M3','M4'],['M4','M5'],['M5','M6'],
-      // 하단
-      ['L1','L2'],
-      // 세로 (상단↔메인)
-      ['U1','M1'],['U2','M2'],['U4','M6'],
+      // 상단 수평 (y=25)
+      ['A','C'],['C','F'],
+      // 메인 수평 (y=39)
+      ['W','B'],['B','D'],['D','E'],['E','G'],
+      // 엘리베이터 세로
+      ['C','EV'],['EV','D'],
+      // 에스컬레이터 세로 (x=36)
+      ['A','B'],
+      // 재활의학 세로 (x=76)
+      ['F','G'],
       // 세로 (메인↔하단)
-      ['M4','L1'],['M5','L2']
+      ['D','H'],['E','I'],['H','I']
     ]
   },
 
@@ -1029,6 +1031,24 @@ function dijkstra(nodes, edges, sId, eId){
   return path;
 }
 
+/* 경로 단순화: 방향이 같은 중간 점 제거 */
+function simplifyPath(pts){
+  if(pts.length<=2) return pts;
+  const result=[pts[0]];
+  for(let i=1;i<pts.length-1;i++){
+    const prev=result[result.length-1];
+    const cur=pts[i];
+    const next=pts[i+1];
+    const dx1=cur.x-prev.x, dy1=cur.y-prev.y;
+    const dx2=next.x-cur.x, dy2=next.y-cur.y;
+    // 방향이 바뀌면 (교차점) 유지, 같은 방향이면 제거
+    const cross=Math.abs(dx1*dy2-dy1*dx2);
+    if(cross>0.5) result.push(cur);
+  }
+  result.push(pts[pts.length-1]);
+  return result;
+}
+
 /* 경로 좌표 배열 */
 function getCorridorPoints(floor, fromPct, toPct){
   const g=corridorGraph[floor];
@@ -1037,7 +1057,8 @@ function getCorridorPoints(floor, fromPct, toPct){
   const eId=nearestNode(g.nodes, toPct.x,   toPct.y);
   const ids=dijkstra(g.nodes, g.edges, sId, eId);
   if(!ids) return [fromPct, toPct];
-  return [fromPct, ...ids.map(id=>({x:g.nodes[id].x,y:g.nodes[id].y})), toPct];
+  const raw=[...ids.map(id=>({x:g.nodes[id].x,y:g.nodes[id].y}))];
+  return simplifyPath(raw);
 }
 
 /* SVG 유도선 그리기 */
