@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v20</title>
+<title>강릉아산병원 안내지도 v15</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
@@ -158,28 +158,81 @@
   .step-heading.type-mid{background:var(--mint-light);color:#00695c;} .step-heading.type-mid .step-num{background:var(--mint);color:#fff;}
   .step-heading.type-end{background:var(--orange-light);color:#e65100;} .step-heading.type-end .step-num{background:var(--orange);color:#fff;}
 
-  /* 이동수단 배지 */
-  .transport-badge {
-    display:inline-flex; align-items:center; gap:5px;
-    padding:6px 14px; border-radius:30px;
-    font-size:14px; font-weight:700;
-    margin:0 auto 12px; max-width:fit-content;
+  /* ── 지금 할 일 액션 박스 (지도 위) ── */
+  .action-box {
+    border-radius:12px 12px 0 0;
+    padding:14px 16px 12px;
+    margin-bottom:0;
+    border-bottom:none;
   }
-  .transport-badge.walk  { background:#e8f5e9; color:#2e7d32; }
-  .transport-badge.elev  { background:#fdf3e3; color:#7d4e20; }
-  .transport-badge.conn  { background:#ede9fe; color:#5b21b6; }
-  .transport-badge-wrap  { display:flex; justify-content:center; margin-bottom:12px; }
+  .action-box.elev { background:#3e1f00; }
+  .action-box.conn { background:#2d1457; }
+  .action-box.end  { background:#7a2e00; }
+  .action-box.walk { background:#1b3a1e; }
 
-  .step-desc{font-size:12.5px;color:var(--text-sub);margin-bottom:10px;padding:0 4px;line-height:1.6;}
+  .action-label {
+    font-size:11px; font-weight:700; letter-spacing:1px;
+    text-transform:uppercase; opacity:0.7; margin-bottom:6px;
+  }
+  .action-label.elev { color:#ffcc80; }
+  .action-label.conn { color:#ce93d8; }
+  .action-label.end  { color:#ffb74d; }
+  .action-label.walk { color:#a5d6a7; }
 
-  /* 다음 단계 버튼 */
+  .action-main {
+    font-size:20px; font-weight:900; line-height:1.25; letter-spacing:-0.5px;
+  }
+  .action-main.elev { color:#fff3e0; }
+  .action-main.conn { color:#f3e5f5; }
+  .action-main.end  { color:#fff8e1; }
+  .action-main.walk { color:#e8f5e9; }
+
+  .action-sub {
+    font-size:12.5px; margin-top:5px; opacity:0.75;
+  }
+  .action-sub.elev { color:#ffe0b2; }
+  .action-sub.conn { color:#e1bee7; }
+  .action-sub.end  { color:#ffe0b2; }
+  .action-sub.walk { color:#c8e6c9; }
+
+  /* 액션박스가 있으면 지도 모서리 위쪽 제거 */
+  .action-box + .map-wrapper { border-radius:0 0 12px 12px; }
+
+  /* ── 다음 목적지 callout (지도 아래, 다음단계 있을 때) ── */
+  .dest-callout {
+    display:flex; align-items:center; gap:12px;
+    padding:14px 16px; margin-top:0;
+    background:var(--card); border:1px solid var(--border);
+    border-top:none; border-radius:0 0 12px 12px;
+    margin-bottom:12px;
+  }
+  .dest-callout-icon {
+    width:42px; height:42px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; flex-shrink:0;
+  }
+  .dest-callout-icon.elev { background:#fdf3e3; }
+  .dest-callout-icon.conn { background:#ede9fe; }
+  .dest-callout-body { flex:1; }
+  .dest-callout-small {
+    font-size:11px; color:var(--text-sub); font-weight:600;
+    letter-spacing:0.3px; margin-bottom:2px;
+  }
+  .dest-callout-floor {
+    font-size:17px; font-weight:900; letter-spacing:-0.3px;
+  }
+  .dest-callout-floor.elev { color:#a0714f; }
+  .dest-callout-floor.conn { color:#7c3aed; }
+
+  /* ── 다음 단계 버튼 ── */
   .next-btn {
-    width:100%; margin-top:12px; padding:12px;
+    width:100%; margin-top:10px; padding:14px;
     background:var(--mint); color:#fff;
     border:none; border-radius:10px;
-    font-size:14px; font-weight:700; font-family:'Noto Sans KR',sans-serif;
-    cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+    font-size:15px; font-weight:800; font-family:'Noto Sans KR',sans-serif;
+    cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px;
     transition:background .15s, transform .15s;
+    letter-spacing:-0.2px;
   }
   .next-btn:hover { background:#00796b; transform:translateY(-1px); }
   .prev-btn {
@@ -190,6 +243,10 @@
     cursor:pointer; transition:border-color .15s;
   }
   .prev-btn:hover { border-color:var(--mint); color:var(--mint); }
+
+  /* 기존 호환용 (빠른검색 단일 지도) */
+  .step-desc{font-size:12.5px;color:var(--text-sub);margin-bottom:10px;padding:0 4px;line-height:1.6;}
+  .transport-badge-wrap { display:none; }
 
   /* 지도 */
   .map-wrapper{position:relative;width:100%;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.14);}
@@ -613,12 +670,16 @@ function createMapBlock(step, index, total){
   heading.innerHTML=`<div class="step-num">${index+1}</div><div>${step.icon} ${step.floorLabel}</div>`;
   block.appendChild(heading);
 
-  // 설명
-  if(step.desc){
-    const desc=document.createElement('div');
-    desc.className='step-desc';
-    desc.textContent=step.desc;
-    block.appendChild(desc);
+  // 액션 박스 (지도 위 강조)
+  if(step.action){
+    const a=step.action;
+    const ab=document.createElement('div');
+    ab.className='action-box '+a.type;
+    ab.innerHTML=
+      `<div class="action-label ${a.type}">${a.type==='elev'?'🛗 이동 방법':a.type==='conn'?'🔀 이동 방법':'📍 안내'}</div>`+
+      `<div class="action-main ${a.type}">${a.dest}으로 이동</div>`+
+      `<div class="action-sub ${a.type}">${a.sub}</div>`;
+    block.appendChild(ab);
   }
 
   // 지도
@@ -641,19 +702,30 @@ function createMapBlock(step, index, total){
   });
   block.appendChild(wrapper);
 
-  // 이동수단 배지 + 다음/이전 버튼 (다단계일 때만)
+  // dest callout + 다음/이전 버튼 (다단계일 때만)
   if(total>1){
-    const badge=getTransportBadge(step);
-    if(badge){
-      const bwrap=document.createElement('div');
-      bwrap.className='transport-badge-wrap';
-      bwrap.innerHTML=`<div class="transport-badge ${badge.cls}">${badge.icon} ${badge.label}</div>`;
-      block.appendChild(bwrap);
+    // 다음 목적지 callout
+    if(index<total-1 && step.nextDesc){
+      const badge=getTransportBadge(step);
+      const cls=badge?badge.cls:'walk';
+      const icon=badge?badge.icon:'🚶';
+      // nextDesc에서 목적지 층 추출
+      const destMatch=step.nextDesc.match(/→\s*(.+)$/);
+      const destText=destMatch?destMatch[1]:step.nextDesc;
+      const dc=document.createElement('div');
+      dc.className='dest-callout';
+      dc.innerHTML=
+        `<div class="dest-callout-icon ${cls}">${icon}</div>`+
+        `<div class="dest-callout-body">`+
+          `<div class="dest-callout-small">다음 목적지</div>`+
+          `<div class="dest-callout-floor ${cls}">${destText}</div>`+
+        `</div>`;
+      block.appendChild(dc);
     }
     if(index<total-1){
       const nb=document.createElement('button');
       nb.className='next-btn';
-      nb.innerHTML=`다음 단계 <span style="font-size:16px">→</span>`;
+      nb.innerHTML=`다음 단계로 이동 <span style="font-size:18px">→</span>`;
       nb.onclick=()=>goToStep(index+1, total);
       block.appendChild(nb);
     }
@@ -739,11 +811,11 @@ function getRouteSteps(src,dst,srcFloor,dstFloor){
   /* 같은 건물, 다른 층 */
   if(sameBuilding){
     steps.push({floor:srcFloor,floorLabel:srcFloor,icon:'🟢',
-      desc:'갈색 마커(엘리베이터·에스컬레이터)를 이용해 '+dstFloor+'으로 이동하세요.',
+      action:{type:'elev', label:'엘리베이터·에스컬레이터 이용', dest:dstFloor, sub:'갈색 마커 위치로 이동 후 탑승'},
       markers:[{type:'start',pos:src},...getTransportMarkers(srcFloor)],
       nextDesc:'엘리베이터·에스컬레이터 탑승 → '+dstFloor});
     steps.push({floor:dstFloor,floorLabel:dstFloor,icon:'🟠',
-      desc:'주황색 마커가 목적지예요.',
+      action:{type:'end', label:'목적지 도착', dest:'주황색 핀 위치', sub:'주황색 마커가 목적지예요'},
       markers:[{type:'end',pos:dst}]});
     return steps;
   }
@@ -757,18 +829,18 @@ function getRouteSteps(src,dst,srcFloor,dstFloor){
     /* 출발층 = 연결통로 층 */
     const conn=connectors[srcBridge];
     steps.push({floor:srcFloor,floorLabel:srcFloor,icon:'🟢',
-      desc:'민트색 마커(연결통로)를 통해 '+dstBuilding+'으로 이동하세요.',
+      action:{type:'conn', label:'연결통로 이동', dest:dstBuilding+' '+bl, sub:'보라색 마커 방향으로 이동'},
       markers:[{type:'start',pos:src},...(conn?[{type:'connector',pos:conn}]:[])],
       nextDesc:bl+' 연결통로 → '+dstBuilding+'으로 이동'});
   } else {
     /* 엘리베이터 타고 연결통로 층으로 */
     steps.push({floor:srcFloor,floorLabel:srcFloor,icon:'🟢',
-      desc:'먼저 갈색 마커(엘리베이터·에스컬레이터)를 타고 '+srcBridge+'으로 이동하세요.',
+      action:{type:'elev', label:'엘리베이터·에스컬레이터 이용', dest:srcBridge, sub:'갈색 마커 위치로 이동 후 탑승'},
       markers:[{type:'start',pos:src},...getTransportMarkers(srcFloor)],
       nextDesc:'엘리베이터 탑승 → '+srcBridge});
     const conn=connectors[srcBridge];
     steps.push({floor:srcBridge,floorLabel:srcBridge,icon:'🔀',
-      desc:'민트색 마커(연결통로)를 통해 '+dstBuilding+'으로 이동하세요.',
+      action:{type:'conn', label:'연결통로 이동', dest:dstBuilding+' '+bl, sub:'보라색 마커 방향으로 이동'},
       markers:[...(conn?[{type:'connector',pos:conn}]:[])],
       nextDesc:bl+' 연결통로 → '+dstBuilding+'으로 이동'});
   }
@@ -777,17 +849,17 @@ function getRouteSteps(src,dst,srcFloor,dstFloor){
     /* 도착층 = 연결통로 층 */
     const conn=connectors[dstBridge];
     steps.push({floor:dstFloor,floorLabel:dstFloor,icon:'🟠',
-      desc:'연결통로로 진입 후 주황색 마커 방향으로 이동하세요.',
+      action:{type:'end', label:'목적지 도착', dest:'주황색 핀 위치', sub:'연결통로 진입 후 주황색 마커 방향으로 이동'},
       markers:[...(conn?[{type:'connector',pos:conn}]:[]),{type:'end',pos:dst}]});
   } else {
     /* 연결통로 진입 후 엘리베이터 필요 */
     const conn=connectors[dstBridge];
     steps.push({floor:dstBridge,floorLabel:dstBridge,icon:'🔀',
-      desc:'연결통로로 진입 후 갈색 마커(엘리베이터·에스컬레이터)를 타고 '+dstFloor+'으로 이동하세요.',
+      action:{type:'elev', label:'엘리베이터·에스컬레이터 이용', dest:dstFloor, sub:'연결통로 진입 후 갈색 마커 위치로 이동'},
       markers:[...(conn?[{type:'connector',pos:conn}]:[]),...getTransportMarkers(dstBridge)],
       nextDesc:'엘리베이터 탑승 → '+dstFloor});
     steps.push({floor:dstFloor,floorLabel:dstFloor,icon:'🟠',
-      desc:'주황색 마커가 목적지예요.',
+      action:{type:'end', label:'목적지 도착', dest:'주황색 핀 위치', sub:'주황색 마커가 목적지예요'},
       markers:[{type:'end',pos:dst}]});
   }
 
