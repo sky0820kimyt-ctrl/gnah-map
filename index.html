@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v22</title>
+<title>강릉아산병원 안내지도 v23</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
@@ -1061,17 +1061,18 @@ function applyGuidePath(wrapper, step, img){
   const from={x:parseFloat(step.pathFrom.left), y:parseFloat(step.pathFrom.top)};
   const to  ={x:parseFloat(step.pathTo.left),   y:parseFloat(step.pathTo.top)};
 
-  // 출발·도착을 가장 가까운 복도 노드로 스냅
+  // 복도 그래프에서 출발·도착에 가장 가까운 노드 찾기
   const g=corridorGraph[step.floor];
   const sId=nearestNode(g.nodes, from.x, from.y);
-  const eId=nearestNode(g.nodes, to.x, to.y);
-  const snapFrom={x:g.nodes[sId].x, y:g.nodes[sId].y};
-  const snapTo  ={x:g.nodes[eId].x, y:g.nodes[eId].y};
+  const eId=nearestNode(g.nodes, to.x,   to.y);
 
-  // 실제 마커→복도 연결선 + 복도 경로
-  const corridorPts=getCorridorPoints(step.floor, snapFrom, snapTo);
-  // 마커에서 복도 진입점, 복도 경로, 복도 탈출점에서 마커 순서
-  const pts=[from, ...corridorPts, to];
+  // 같은 노드면 선 불필요
+  if(sId===eId) return;
+
+  // 복도 노드만으로 최단경로 탐색 (마커 원본 좌표 제외 → 벽 통과 방지)
+  const ids=dijkstra(g.nodes, g.edges, sId, eId);
+  if(!ids||ids.length<2) return;
+  const pts=ids.map(id=>({x:g.nodes[id].x, y:g.nodes[id].y}));
 
   if(img.complete&&img.naturalWidth>0){
     drawGuidePath(wrapper, pts, 0.2);
@@ -1120,13 +1121,13 @@ function getRouteSteps(src,dst,srcFloor,dstFloor){
 
   /* 같은 건물, 다른 층 */
   if(sameBuilding){
-    const _elevSrc=elevators[srcFloor]||escalators[srcFloor];
+    const _elevSrc=elevators[srcFloor];
     steps.push({floor:srcFloor,floorLabel:srcFloor,icon:'🟢',
       action:{type:'elev', label:'엘리베이터·에스컬레이터 이용', dest:dstFloor, sub:'갈색 마커 위치로 이동 후 탑승'},
       markers:[{type:'start',pos:src},...getTransportMarkers(srcFloor)],
       pathFrom:src, pathTo:_elevSrc||src,
       nextDesc:'엘리베이터·에스컬레이터 탑승 → '+dstFloor});
-    const _elevDst=elevators[dstFloor]||escalators[dstFloor];
+    const _elevDst=elevators[dstFloor];
     steps.push({floor:dstFloor,floorLabel:dstFloor,icon:'🟠',
       action:{type:'end', label:'목적지 도착', dest:'주황색 핀 위치', sub:'주황색 마커가 목적지예요'},
       markers:[{type:'end',pos:dst}],
