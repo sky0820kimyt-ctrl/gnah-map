@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v36</title>
+<title>강릉아산병원 안내지도 v37</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
@@ -1410,6 +1410,20 @@ function handleAdminClick(e){
       display:none; position:fixed; inset:0; background:rgba(0,0,0,.5);
       z-index:10999;
     }
+    #edImportBox, #edPreviewBox {
+      display:none; position:fixed; top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      background:#fff; border-radius:14px; padding:20px;
+      box-shadow:0 8px 40px rgba(0,0,0,0.3);
+      z-index:11000; width:90%; max-width:600px;
+    }
+    #edImportBox h3, #edPreviewBox h3 { font-size:14px; margin-bottom:10px; color:#009688; }
+    #edImportText {
+      width:100%; height:200px; font-size:11px; font-family:monospace;
+      border:1px solid #dde8e5; border-radius:8px; padding:8px;
+      resize:none; color:#2c3e35;
+    }
+    .ed-node.edge-from { background:#ff8c42 !important; }
   `;
   document.head.appendChild(style);
 
@@ -1419,12 +1433,13 @@ function handleAdminClick(e){
     <div id="edToolbar">
       <h2>🗺️ 복도 에디터</h2>
       <select id="edFloorSel"></select>
-      <button class="ed-btn green"  id="edAddNode">＋ 노드 추가</button>
-      <button class="ed-btn blue"   id="edAddEdge">🔗 엣지 연결</button>
-      <button class="ed-btn red"    id="edDelNode">🗑 노드 삭제</button>
-      <button class="ed-btn orange" id="edSave">💾 코드 내보내기</button>
-      <button class="ed-btn purple" id="edClose">✕ 닫기</button>
-      <span id="edStatus">노드를 드래그해서 위치를 조정하세요</span>
+      <button class="ed-btn green"  id="edAddNode">＋ 노드</button>
+      <button class="ed-btn blue"   id="edAddEdge">🔗 엣지</button>
+      <button class="ed-btn red"    id="edDelNode">🗑 삭제</button>
+      <button class="ed-btn orange" id="edSave">💾 내보내기</button>
+      <button class="ed-btn green"  id="edImport">📥 불러오기</button>
+      <button class="ed-btn purple" id="edPreview">🔍 경로 미리보기</button>
+      <button class="ed-btn red"    id="edClose" style="margin-left:auto">✕ 닫기</button>
     </div>
     <div id="edCanvas">
       <img id="edMapImg" src="" alt="" draggable="false">
@@ -1432,198 +1447,304 @@ function handleAdminClick(e){
     </div>
     <div id="edPanel">
       <span id="edHint">📌 모드: <b id="edModeLabel">이동</b></span>
-      <span>선택 노드: <b id="edSelLabel">없음</b></span>
+      <span>선택: <b id="edSelLabel">없음</b></span>
       <span>좌표: <b id="edCoordLabel">-</b></span>
-      <span style="margin-left:auto;font-size:11px;color:#999">클릭=선택 | 드래그=이동 | 엣지모드: 두 노드 순서대로 클릭</span>
+      <span id="edSaveStatus" style="margin-left:auto;font-size:11px;color:#43a047;font-weight:600;"></span>
+      <span id="edStatusMsg" style="font-size:11px;color:#999">드래그=이동 | 엣지모드: 두 노드 순서대로 클릭</span>
     </div>
   `;
   document.body.appendChild(edDiv);
 
-  // ── 내보내기/오버레이 ──
+  // ── 팝업들 ──
   const exportBox = document.createElement('div');
   exportBox.id = 'edExportBox';
   exportBox.innerHTML = `
-    <h3>📋 corridorGraph 코드 복사</h3>
+    <h3>💾 corridorGraph 내보내기</h3>
     <textarea id="edExportText" readonly></textarea>
     <div style="display:flex;gap:8px;margin-top:10px;">
-      <button class="ed-btn orange" id="edCopyBtn" style="flex:1">📋 클립보드에 복사</button>
+      <button class="ed-btn orange" id="edCopyBtn" style="flex:1">📋 클립보드 복사</button>
+      <button class="ed-btn green"  id="edSaveLocal" style="flex:1">💾 브라우저에 저장</button>
       <button class="ed-btn red"    id="edExportClose" style="flex:1">닫기</button>
     </div>
-    <p style="font-size:11px;color:#999;margin-top:8px;">복사 후 HTML 파일의 corridorGraph 부분에 붙여넣기 하세요.</p>
+    <p style="font-size:11px;color:#888;margin-top:8px;">💡 "브라우저에 저장"을 누르면 다음에 에디터를 열 때 자동으로 불러와요.</p>
   `;
   document.body.appendChild(exportBox);
+
+  const importBox = document.createElement('div');
+  importBox.id = 'edImportBox';
+  importBox.innerHTML = `
+    <h3>📥 corridorGraph 불러오기</h3>
+    <p style="font-size:12px;color:#666;margin-bottom:8px;">다른 컴퓨터에서 내보낸 코드를 붙여넣으세요.</p>
+    <textarea id="edImportText" placeholder="const corridorGraph = { ... } 코드를 여기에 붙여넣으세요"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="ed-btn orange" id="edImportApply" style="flex:1">✅ 적용</button>
+      <button class="ed-btn red"    id="edImportClose" style="flex:1">취소</button>
+    </div>
+  `;
+  document.body.appendChild(importBox);
+
+  const previewBox = document.createElement('div');
+  previewBox.id = 'edPreviewBox';
+  previewBox.innerHTML = `
+    <h3>🔍 경로 미리보기</h3>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:140px;">
+        <label style="font-size:12px;font-weight:600;color:#666;display:block;margin-bottom:4px;">출발지</label>
+        <input id="edPreviewFrom" type="text" placeholder="예: 신경과" list="edFromList"
+          style="width:100%;padding:8px 10px;border:1.5px solid #dde8e5;border-radius:8px;font-size:13px;font-family:'Noto Sans KR',sans-serif;">
+        <datalist id="edFromList"></datalist>
+      </div>
+      <div style="flex:1;min-width:140px;">
+        <label style="font-size:12px;font-weight:600;color:#666;display:block;margin-bottom:4px;">도착지</label>
+        <input id="edPreviewTo" type="text" placeholder="예: ct실" list="edToList"
+          style="width:100%;padding:8px 10px;border:1.5px solid #dde8e5;border-radius:8px;font-size:13px;font-family:'Noto Sans KR',sans-serif;">
+        <datalist id="edToList"></datalist>
+      </div>
+      <button class="ed-btn orange" id="edPreviewRun" style="align-self:flex-end;padding:9px 18px">▶ 미리보기</button>
+    </div>
+    <div id="edPreviewResult" style="font-size:12px;color:#2c3e35;background:#f5f7f6;border-radius:8px;padding:10px;min-height:40px;line-height:1.7;white-space:pre-wrap;"></div>
+    <button class="ed-btn red" id="edPreviewClose" style="width:100%;margin-top:10px;">닫기</button>
+  `;
+  document.body.appendChild(previewBox);
+
   const overlay = document.createElement('div');
   overlay.id = 'edOverlay';
   document.body.appendChild(overlay);
 
+  // ── 저장/불러오기 키 ──
+  const STORAGE_KEY = 'gnah_corridorGraph_v1';
+
   // ── 상태 ──
   let currentFloor = Object.keys(corridorGraph)[0];
-  let workGraph = JSON.parse(JSON.stringify(corridorGraph)); // 깊은 복사
-  let mode = 'move'; // 'move' | 'addNode' | 'addEdge' | 'delNode'
+  // localStorage에 저장된 게 있으면 우선 사용
+  let workGraph = (() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        document.getElementById('edSaveStatus').textContent = '💾 저장된 데이터 불러옴';
+        return parsed;
+      }
+    } catch(e) {}
+    return JSON.parse(JSON.stringify(corridorGraph));
+  })();
+
+  let mode = 'move';
   let selectedNode = null;
   let edgeFrom = null;
   let dragging = null;
   let dragOffX = 0, dragOffY = 0;
 
-  const floorSel   = document.getElementById('edFloorSel');
-  const mapImg     = document.getElementById('edMapImg');
-  const svg        = document.getElementById('edSvg');
-  const canvas     = document.getElementById('edCanvas');
-  const status     = document.getElementById('edStatus');
-  const modeLabel  = document.getElementById('edModeLabel');
-  const selLabel   = document.getElementById('edSelLabel');
-  const coordLabel = document.getElementById('edCoordLabel');
+  const floorSel    = document.getElementById('edFloorSel');
+  const mapImg      = document.getElementById('edMapImg');
+  const svg         = document.getElementById('edSvg');
+  const canvas      = document.getElementById('edCanvas');
+  const saveStatus  = document.getElementById('edSaveStatus');
+  const modeLabel   = document.getElementById('edModeLabel');
+  const selLabel    = document.getElementById('edSelLabel');
+  const coordLabel  = document.getElementById('edCoordLabel');
+  const statusMsg   = document.getElementById('edStatusMsg');
 
-  // 층 선택 드롭다운 채우기
+  // 층 선택 드롭다운
   Object.keys(corridorGraph).forEach(f => {
     const opt = document.createElement('option');
     opt.value = f; opt.textContent = f;
     floorSel.appendChild(opt);
   });
 
+  // datalist 채우기
+  function fillDatalist() {
+    ['edFromList','edToList'].forEach(id => {
+      const dl = document.getElementById(id);
+      dl.innerHTML = Object.keys(positions).map(k=>`<option value="${k}">`).join('');
+    });
+  }
+  fillDatalist();
+
   function setMode(m, label) {
     mode = m; edgeFrom = null; selectedNode = null;
     modeLabel.textContent = label;
-    status.textContent = {
-      move:    '노드를 드래그해서 위치를 조정하세요',
+    statusMsg.textContent = {
+      move:    '드래그=이동 | 엣지모드: 두 노드 순서대로 클릭',
       addNode: '지도를 클릭해서 노드를 추가하세요',
       addEdge: '연결할 첫 번째 노드를 클릭하세요',
       delNode: '삭제할 노드를 클릭하세요',
     }[m];
-    renderNodes();
+    renderAll();
   }
 
   function loadFloor(floor) {
     currentFloor = floor;
+    if (!workGraph[floor]) workGraph[floor] = {nodes:{},edges:[]};
     mapImg.src = maps[floor];
     selectedNode = null; edgeFrom = null;
-    renderNodes();
+    renderAll();
   }
 
-  // ── 노드+엣지 렌더링 ──
-  function renderNodes() {
-    // SVG 엣지
+  // ── 렌더링 ──
+  function getImgRect() { return mapImg.getBoundingClientRect(); }
+  function getCanvasRect() { return canvas.getBoundingClientRect(); }
+  function pctToCanvas(xPct, yPct) {
+    const ir = getImgRect(), cr = getCanvasRect();
+    return {
+      x: (ir.left - cr.left) + xPct/100 * ir.width,
+      y: (ir.top  - cr.top)  + yPct/100 * ir.height
+    };
+  }
+
+  function renderAll(previewPts) {
     svg.innerHTML = '';
+    canvas.querySelectorAll('.ed-node').forEach(n=>n.remove());
     const g = workGraph[currentFloor];
     if (!g) return;
 
-    // SVG 뷰박스를 캔버스 크기에 맞춤
-    const cw = canvas.offsetWidth, ch = canvas.offsetHeight;
-    const imgR = mapImg.getBoundingClientRect();
-    const iw = imgR.width, ih = imgR.height;
-    const ox = imgR.left - canvas.getBoundingClientRect().left;
-    const oy = imgR.top  - canvas.getBoundingClientRect().top;
-
-    // 기존 노드 DOM 제거
-    canvas.querySelectorAll('.ed-node').forEach(n=>n.remove());
-
-    // 엣지 선 그리기
+    // ── 엣지 ──
     (g.edges||[]).forEach(([a,b]) => {
       const na = g.nodes[a], nb = g.nodes[b];
       if (!na||!nb) return;
-      const x1 = ox + na.x/100*iw, y1 = oy + na.y/100*ih;
-      const x2 = ox + nb.x/100*iw, y2 = oy + nb.y/100*ih;
+      const p1 = pctToCanvas(na.x, na.y);
+      const p2 = pctToCanvas(nb.x, nb.y);
       const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-      line.setAttribute('x1',x1); line.setAttribute('y1',y1);
-      line.setAttribute('x2',x2); line.setAttribute('y2',y2);
-      line.setAttribute('stroke','rgba(0,150,136,0.6)');
-      line.setAttribute('stroke-width','2');
+      line.setAttribute('x1',p1.x); line.setAttribute('y1',p1.y);
+      line.setAttribute('x2',p2.x); line.setAttribute('y2',p2.y);
+      line.setAttribute('stroke','rgba(0,150,136,0.55)');
+      line.setAttribute('stroke-width','2.5');
+      // 엣지 삭제 (더블클릭)
+      line.style.cursor = 'pointer';
+      line.setAttribute('pointer-events','stroke');
+      const ea=a,eb=b;
+      line.addEventListener('dblclick', ()=>{
+        if(!confirm(`엣지 ${ea}↔${eb} 를 삭제하시겠습니까?`)) return;
+        workGraph[currentFloor].edges = workGraph[currentFloor].edges.filter(([x,y])=>!(x===ea&&y===eb)&&!(x===eb&&y===ea));
+        renderAll();
+      });
       svg.appendChild(line);
     });
 
-    // 노드 DOM
+    // ── 미리보기 경로선 ──
+    if (previewPts && previewPts.length >= 2) {
+      const ps = previewPts.map(p => {
+        const c2 = pctToCanvas(p.x, p.y);
+        return `${c2.x},${c2.y}`;
+      }).join(' ');
+      const fill = document.createElementNS('http://www.w3.org/2000/svg','polyline');
+      fill.setAttribute('points',ps);
+      fill.setAttribute('fill','none');
+      fill.setAttribute('stroke','rgba(255,140,66,0.35)');
+      fill.setAttribute('stroke-width','8');
+      fill.setAttribute('stroke-linecap','square');
+      fill.setAttribute('stroke-linejoin','miter');
+      svg.appendChild(fill);
+      const line = document.createElementNS('http://www.w3.org/2000/svg','polyline');
+      line.setAttribute('points',ps);
+      line.setAttribute('fill','none');
+      line.setAttribute('stroke','#ff8c42');
+      line.setAttribute('stroke-width','2.5');
+      line.setAttribute('stroke-linecap','square');
+      line.setAttribute('stroke-linejoin','miter');
+      svg.appendChild(line);
+    }
+
+    // ── 노드 ──
     Object.entries(g.nodes).forEach(([id, n]) => {
+      const pos = pctToCanvas(n.x, n.y);
       const nd = document.createElement('div');
-      nd.className = 'ed-node' + (id===selectedNode?' selected':'');
-      nd.textContent = id.replace(/[A-Z]/,'');
-      nd.title = `${id} (${n.x.toFixed(1)}, ${n.y.toFixed(1)})`;
-      nd.style.left = (ox + n.x/100*iw) + 'px';
-      nd.style.top  = (oy + n.y/100*ih) + 'px';
+      nd.className = 'ed-node' + (id===selectedNode?' selected':'') + (id===edgeFrom?' edge-from':'');
+      nd.textContent = String(id).length <= 3 ? id : id.slice(0,3);
+      nd.title = `${id}  x:${n.x} y:${n.y}`;
+      nd.style.left = pos.x + 'px';
+      nd.style.top  = pos.y + 'px';
       nd.dataset.id = id;
 
-      // 드래그
       nd.addEventListener('mousedown', e => {
         e.stopPropagation();
-        if (mode==='delNode') {
-          deleteNode(id); return;
-        }
+        if (mode==='delNode') { deleteNode(id); return; }
         if (mode==='addEdge') {
           if (!edgeFrom) {
             edgeFrom = id;
-            nd.style.background = '#ff8c42';
-            status.textContent = `"${id}" 선택됨 → 연결할 두 번째 노드를 클릭하세요`;
+            statusMsg.textContent = `"${id}" 선택됨 → 두 번째 노드 클릭`;
+            renderAll();
           } else if (edgeFrom !== id) {
-            addEdge(edgeFrom, id);
-            edgeFrom = null;
+            addEdge(edgeFrom, id); edgeFrom = null;
           }
           return;
         }
-        // 이동 모드
         selectedNode = id;
-        selLabel.textContent = id;
+        selLabel.textContent = `${id} (${n.x}, ${n.y})`;
         dragging = id;
-        const nr = nd.getBoundingClientRect();
-        dragOffX = e.clientX - nr.left - nr.width/2;
-        dragOffY = e.clientY - nr.top  - nr.height/2;
-        renderNodes();
+        dragOffX = e.clientX - pos.x - canvas.getBoundingClientRect().left;
+        dragOffY = e.clientY - pos.y - canvas.getBoundingClientRect().top;
+        renderAll();
       });
-
       canvas.appendChild(nd);
     });
   }
 
-  // 마우스 이동 (드래그)
+  // 드래그
   document.addEventListener('mousemove', e => {
     if (!dragging) return;
     const g = workGraph[currentFloor];
     if (!g||!g.nodes[dragging]) return;
-    const imgR = mapImg.getBoundingClientRect();
-    const cx = e.clientX - dragOffX - imgR.left;
-    const cy = e.clientY - dragOffY - imgR.top;
-    const xPct = Math.max(0, Math.min(100, cx/imgR.width*100));
-    const yPct = Math.max(0, Math.min(100, cy/imgR.height*100));
-    g.nodes[dragging].x = Math.round(xPct*10)/10;
-    g.nodes[dragging].y = Math.round(yPct*10)/10;
-    coordLabel.textContent = `x:${g.nodes[dragging].x} y:${g.nodes[dragging].y}`;
-    renderNodes();
+    const ir = getImgRect();
+    const cx = e.clientX - dragOffX - ir.left;
+    const cy = e.clientY - dragOffY - ir.top;
+    const xP = Math.max(0,Math.min(100, Math.round(cx/ir.width*1000)/10));
+    const yP = Math.max(0,Math.min(100, Math.round(cy/ir.height*1000)/10));
+    g.nodes[dragging].x = xP;
+    g.nodes[dragging].y = yP;
+    coordLabel.textContent = `x:${xP} y:${yP}`;
+    selLabel.textContent = `${dragging} (${xP}, ${yP})`;
+    renderAll();
+    autoSaveLocal();
   });
   document.addEventListener('mouseup', () => { dragging = null; });
 
-  // 캔버스 클릭 (노드 추가)
+  // 클릭으로 노드 추가
   canvas.addEventListener('click', e => {
     if (mode !== 'addNode') return;
     if (e.target.classList.contains('ed-node')) return;
-    const imgR = mapImg.getBoundingClientRect();
-    const xPct = Math.round((e.clientX-imgR.left)/imgR.width*1000)/10;
-    const yPct = Math.round((e.clientY-imgR.top)/imgR.height*1000)/10;
+    const ir = getImgRect();
+    const xP = Math.round((e.clientX-ir.left)/ir.width*1000)/10;
+    const yP = Math.round((e.clientY-ir.top)/ir.height*1000)/10;
     const g = workGraph[currentFloor];
-    const newId = prompt(`새 노드 ID:\n현재 좌표: x=${xPct}, y=${yPct}`);
-    if (!newId||!newId.trim()) return;
+    const newId = prompt(`새 노드 ID:\n좌표: x=${xP}, y=${yP}`);
+    if (!newId?.trim()) return;
     if (g.nodes[newId.trim()]) { alert('이미 존재하는 ID입니다.'); return; }
-    g.nodes[newId.trim()] = {x:xPct, y:yPct};
-    renderNodes();
+    g.nodes[newId.trim()] = {x:xP, y:yP};
+    autoSaveLocal();
+    renderAll();
   });
 
   function addEdge(a, b) {
     const g = workGraph[currentFloor];
-    const exists = g.edges.some(([x,y])=>(x===a&&y===b)||(x===b&&y===a));
-    if (exists) { alert('이미 연결된 엣지입니다.'); return; }
+    if (g.edges.some(([x,y])=>(x===a&&y===b)||(x===b&&y===a))) { alert('이미 연결된 엣지입니다.'); return; }
     g.edges.push([a, b]);
-    status.textContent = `엣지 추가됨: ${a} ↔ ${b}`;
-    renderNodes();
+    statusMsg.textContent = `엣지 추가됨: ${a} ↔ ${b}`;
+    autoSaveLocal();
+    renderAll();
   }
 
   function deleteNode(id) {
+    if (!confirm(`"${id}" 노드를 삭제하시겠습니까?`)) return;
     const g = workGraph[currentFloor];
-    if (!confirm(`"${id}" 노드를 삭제하시겠습니까?\n연결된 엣지도 모두 삭제됩니다.`)) return;
     delete g.nodes[id];
     g.edges = g.edges.filter(([a,b])=>a!==id&&b!==id);
     selectedNode = null;
-    renderNodes();
+    autoSaveLocal();
+    renderAll();
   }
 
-  // ── 코드 내보내기 ──
-  function exportCode() {
+  // ── 자동 저장 (localStorage) ──
+  function autoSaveLocal() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(workGraph));
+      saveStatus.textContent = '💾 자동저장됨';
+      setTimeout(()=>saveStatus.textContent='', 2000);
+    } catch(e) {}
+  }
+
+  // ── 코드 생성 ──
+  function buildCode() {
     let code = 'const corridorGraph = {\n\n';
     Object.entries(workGraph).forEach(([floor, g]) => {
       code += `  '${floor}': {\n    nodes: {\n`;
@@ -1631,15 +1752,93 @@ function handleAdminClick(e){
         code += `      ${id}:{x:${n.x},y:${n.y}},\n`;
       });
       code += `    },\n    edges:[\n`;
-      (g.edges||[]).forEach(([a,b]) => {
-        code += `      ['${a}','${b}'],\n`;
-      });
+      (g.edges||[]).forEach(([a,b]) => { code += `      ['${a}','${b}'],\n`; });
       code += `    ]\n  },\n\n`;
     });
-    code += '};\n';
-    document.getElementById('edExportText').value = code;
+    return code + '};\n';
+  }
+
+  function exportCode() {
+    document.getElementById('edExportText').value = buildCode();
     exportBox.style.display = 'block';
     overlay.style.display = 'block';
+  }
+
+  // ── 불러오기 ──
+  function importCode() {
+    const raw = document.getElementById('edImportText').value.trim();
+    if (!raw) { alert('코드를 붙여넣어 주세요.'); return; }
+    try {
+      // 안전하게 corridorGraph 객체 추출
+      const match = raw.match(/const corridorGraph\s*=\s*(\{[\s\S]*\})\s*;?/);
+      if (!match) throw new Error('corridorGraph 형식이 아닙니다.');
+      const fn = new Function('return ' + match[1]);
+      const imported = fn();
+      workGraph = imported;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(workGraph));
+      // 드롭다운 업데이트
+      floorSel.innerHTML = '';
+      Object.keys(workGraph).forEach(f => {
+        const opt = document.createElement('option'); opt.value=f; opt.textContent=f;
+        floorSel.appendChild(opt);
+      });
+      currentFloor = Object.keys(workGraph)[0];
+      importBox.style.display = 'none';
+      overlay.style.display  = 'none';
+      document.getElementById('edImportText').value = '';
+      loadFloor(currentFloor);
+      saveStatus.textContent = '✅ 불러오기 완료!';
+      setTimeout(()=>saveStatus.textContent='', 3000);
+    } catch(e) {
+      alert('코드 파싱 오류:\n' + e.message);
+    }
+  }
+
+  // ── 경로 미리보기 ──
+  function runPreview() {
+    const fromVal = document.getElementById('edPreviewFrom').value.trim();
+    const toVal   = document.getElementById('edPreviewTo').value.trim();
+    const result  = document.getElementById('edPreviewResult');
+
+    const fromKey = resolveKey(fromVal);
+    const toKey   = resolveKey(toVal);
+    if (!fromKey && fromVal) { result.textContent = `⚠️ "${fromVal}" 을 찾을 수 없어요.`; return; }
+    if (!toKey)   { result.textContent = `⚠️ "${toVal}" 을 찾을 수 없어요.`; return; }
+
+    const src = fromKey ? positions[fromKey] : null;
+    const dst = positions[toKey];
+    const srcFloor = src ? src.floor : null;
+    const dstFloor = dst.floor;
+
+    let info = `출발: ${fromKey||'(없음)'} — ${srcFloor||'-'}\n도착: ${toKey} — ${dstFloor}\n`;
+
+    // 현재 층이 관련 층이면 바로 경로 그리기
+    const floorToShow = srcFloor || dstFloor;
+    if (floorSel.value !== floorToShow) {
+      floorSel.value = floorToShow;
+      loadFloor(floorToShow);
+    }
+
+    const g = workGraph[floorToShow];
+    if (!g) { result.textContent = info + `\n❌ ${floorToShow} 그래프 없음`; return; }
+
+    const fromPct = src
+      ? {x:parseFloat(src.left),   y:parseFloat(src.top)}
+      : {x:parseFloat(dst.left),   y:parseFloat(dst.top)};
+    const toPct   = {x:parseFloat(dst.left), y:parseFloat(dst.top)};
+
+    const sId = nearestNode(g.nodes, fromPct.x, fromPct.y);
+    const eId = nearestNode(g.nodes, toPct.x,   toPct.y);
+    info += `\n가장 가까운 노드: 출발=${sId}, 도착=${eId}\n`;
+
+    const ids = dijkstra(g.nodes, g.edges, sId, eId);
+    if (!ids) { result.textContent = info + '\n❌ 경로를 찾을 수 없어요.'; renderAll(); return; }
+
+    const pts = simplifyPath(ids.map(id=>({x:g.nodes[id].x, y:g.nodes[id].y})));
+    info += `경로 노드: ${ids.join(' → ')}\n(${pts.length}개 점으로 단순화)`;
+    result.textContent = info;
+
+    renderAll(pts);
   }
 
   // ── 이벤트 바인딩 ──
@@ -1647,30 +1846,61 @@ function handleAdminClick(e){
   document.getElementById('edAddNode').addEventListener('click', () => setMode('addNode','＋ 노드 추가'));
   document.getElementById('edAddEdge').addEventListener('click', () => setMode('addEdge','🔗 엣지 연결'));
   document.getElementById('edDelNode').addEventListener('click', () => setMode('delNode','🗑 노드 삭제'));
-  document.getElementById('edClose').addEventListener('click', () => {
-    if (confirm('에디터를 닫겠습니까? 저장하지 않은 변경사항은 사라집니다.'))
-      location.href = location.pathname;
-  });
   document.getElementById('edSave').addEventListener('click', exportCode);
+
+  document.getElementById('edImport').addEventListener('click', () => {
+    importBox.style.display='block'; overlay.style.display='block';
+  });
+  document.getElementById('edPreview').addEventListener('click', () => {
+    previewBox.style.display='block'; overlay.style.display='block';
+  });
+
+  document.getElementById('edClose').addEventListener('click', () => {
+    if (confirm('에디터를 닫겠습니까?')) location.href = location.pathname;
+  });
+
+  // 내보내기 팝업
   document.getElementById('edCopyBtn').addEventListener('click', () => {
-    navigator.clipboard.writeText(document.getElementById('edExportText').value)
-      .then(()=>alert('✅ 클립보드에 복사되었습니다!\nHTML 파일의 corridorGraph 부분에 붙여넣기 하세요.'))
-      .catch(()=>{
-        document.getElementById('edExportText').select();
-        document.execCommand('copy');
-        alert('✅ 복사되었습니다!');
-      });
+    const txt = document.getElementById('edExportText').value;
+    navigator.clipboard.writeText(txt)
+      .then(()=>alert('✅ 클립보드에 복사되었습니다!'))
+      .catch(()=>{ document.getElementById('edExportText').select(); document.execCommand('copy'); alert('✅ 복사됨!'); });
+  });
+  document.getElementById('edSaveLocal').addEventListener('click', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(workGraph));
+    alert('✅ 브라우저에 저장되었습니다!\n다음에 에디터를 열 때 자동으로 불러와요.');
   });
   document.getElementById('edExportClose').addEventListener('click', () => {
     exportBox.style.display='none'; overlay.style.display='none';
   });
-  overlay.addEventListener('click', () => {
-    exportBox.style.display='none'; overlay.style.display='none';
+
+  // 불러오기 팝업
+  document.getElementById('edImportApply').addEventListener('click', importCode);
+  document.getElementById('edImportClose').addEventListener('click', () => {
+    importBox.style.display='none'; overlay.style.display='none';
+  });
+
+  // 미리보기 팝업
+  document.getElementById('edPreviewRun').addEventListener('click', runPreview);
+  document.getElementById('edPreviewClose').addEventListener('click', () => {
+    previewBox.style.display='none'; overlay.style.display='none'; renderAll();
+  });
+  document.getElementById('edPreviewFrom').addEventListener('keydown', e => { if(e.key==='Enter') runPreview(); });
+  document.getElementById('edPreviewTo').addEventListener('keydown',   e => { if(e.key==='Enter') runPreview(); });
+
+  overlay.addEventListener('click', e => {
+    if (e.target===overlay) {
+      exportBox.style.display='none';
+      importBox.style.display='none';
+      previewBox.style.display='none';
+      overlay.style.display='none';
+      renderAll();
+    }
   });
 
   // 리사이즈 대응
-  window.addEventListener('resize', () => renderNodes());
-  mapImg.addEventListener('load', () => renderNodes());
+  window.addEventListener('resize', () => renderAll());
+  mapImg.addEventListener('load', () => renderAll());
 
   // 초기 로드
   loadFloor(currentFloor);
