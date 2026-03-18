@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v31</title>
+<title>강릉아산병원 안내지도 v32</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
@@ -170,7 +170,7 @@
     border-bottom:none;
   }
   .action-box.elev { background:#3e1f00; }
-  .action-box.esc  { background:#3e2800; }  /* 에스컬레이터 구분 */
+  .action-box.esc  { background:#3e2800; }
   .action-box.conn { background:#2d1457; }
   .action-box.end  { background:#7a2e00; }
   .action-box.walk { background:#1b3a1e; }
@@ -241,7 +241,7 @@
     box-shadow: 0 4px 14px rgba(0,150,136,0.35);
   }
   .next-btn:hover { background:#00796b; transform:translateY(-1px); }
-  /* 이전 단계 버튼 — 더 잘 보이게 */
+  /* 이전 단계 버튼 */
   .prev-btn {
     width:100%; margin-top:8px; padding:11px;
     background:#f5f7f6; color:var(--text-sub);
@@ -251,7 +251,7 @@
     display:flex; align-items:center; justify-content:center; gap:6px;
   }
   .prev-btn:hover { border-color:var(--mint); color:var(--mint); background:#e0f2f1; }
-  /* 점선 유도선 애니메이션 (경로선 위에 흐르는 점) */
+  /* 점선 유도선 애니메이션 */
   @keyframes dashFlow {
     to { stroke-dashoffset: -20; }
   }
@@ -263,7 +263,7 @@
     opacity: 0.7;
   }
 
-  /* 기존 호환용 (빠른검색 단일 지도) */
+  /* 기존 호환용 */
   .step-desc{font-size:12.5px;color:var(--text-sub);margin-bottom:10px;padding:0 4px;line-height:1.6;}
   .transport-badge-wrap { display:none; }
 
@@ -279,7 +279,7 @@
   .floor-map{width:100%;height:auto;display:block;cursor:zoom-in;transition:transform .2s;}
   .floor-map:hover{transform:scale(1.005);}
 
-  /* 마커 — 핀 모양 (글자 가림 방지) */
+  /* 마커 — 핀 모양 */
   @keyframes pinFloat{
     0%,100%{ transform:translate(-50%,-100%) translateY(0); }
     50%    { transform:translate(-50%,-100%) translateY(-4px); }
@@ -293,7 +293,6 @@
     filter: drop-shadow(0 2px 5px rgba(0,0,0,0.30));
     animation: pinFloat 2s ease-in-out infinite;
   }
-  /* 핀 머리 */
   .marker::before {
     content: '';
     position: absolute;
@@ -305,7 +304,6 @@
     border: 2.5px solid rgba(255,255,255,0.85);
     box-shadow: inset 0 0 0 3px rgba(255,255,255,0.2);
   }
-  /* 핀 꼬리 그림자 */
   .marker::after {
     content: '';
     position: absolute;
@@ -675,7 +673,6 @@ function getTransportBadge(step){
   if(!step.nextDesc) return null;
   const t=step.nextDesc;
   if(t.includes('연결통로')) return {cls:'conn', icon:'🔀', label:'연결통로 이동'};
-  // 엘리베이터와 에스컬레이터 구분
   if(t.includes('에스컬레이터')&&!t.includes('엘리베이터'))
     return {cls:'elev', icon:'🪜', label:'에스컬레이터 이용'};
   if(t.includes('엘리베이터')&&!t.includes('에스컬레이터'))
@@ -696,7 +693,6 @@ function createMapBlock(step, index, total){
   block.className='step-block fade-in'+(total===1?' always-show':'');
   if(total>1 && index===0) block.classList.add('active-step');
 
-  // 헤딩 (출발/도착 역할 배지 추가)
   const roleLabel = index===0?'출발':(index===total-1?'도착':'경유');
   const heading=document.createElement('div');
   heading.className='step-heading '+typeClass;
@@ -706,7 +702,6 @@ function createMapBlock(step, index, total){
     (total>1?`<span class="step-role-badge">${roleLabel}</span>`:'');
   block.appendChild(heading);
 
-  // 액션 박스 (지도 위 강조)
   if(step.action){
     const a=step.action;
     const ab=document.createElement('div');
@@ -718,7 +713,6 @@ function createMapBlock(step, index, total){
     block.appendChild(ab);
   }
 
-  // 지도
   const wrapper=document.createElement('div');
   wrapper.className='map-wrapper';
   const img=document.createElement('img');
@@ -737,19 +731,15 @@ function createMapBlock(step, index, total){
     wrapper.appendChild(marker);
   });
 
-  // 복도 유도선
   applyGuidePath(wrapper, step, img);
 
   block.appendChild(wrapper);
 
-  // dest callout + 다음/이전 버튼 (다단계일 때만)
   if(total>1){
-    // 다음 목적지 callout
     if(index<total-1 && step.nextDesc){
       const badge=getTransportBadge(step);
       const cls=badge?badge.cls:'walk';
       const icon=badge?badge.icon:'🚶';
-      // nextDesc에서 목적지 층 추출
       const destMatch=step.nextDesc.match(/→\s*(.+)$/);
       const destText=destMatch?destMatch[1]:step.nextDesc;
       const dc=document.createElement('div');
@@ -765,7 +755,6 @@ function createMapBlock(step, index, total){
     if(index<total-1){
       const nb=document.createElement('button');
       nb.className='next-btn';
-      // 이동수단에 맞는 액션 텍스트
       const badge=getTransportBadge(step);
       const destMatch=(step.nextDesc||'').match(/→\s*(.+)$/);
       const destTxt=destMatch?destMatch[1]:'다음 단계';
@@ -796,9 +785,7 @@ function goToStep(idx, total){
     b.classList.remove('active-step');
     if(i===idx) b.classList.add('active-step');
   }
-  // 진행바 업데이트
   updateProgressBar(idx, total);
-  // 스크롤
   const pb=document.getElementById('routeProgressBar');
   if(pb) pb.scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -819,22 +806,18 @@ function updateProgressBar(activeIdx, total){
 }
 
 /* ════════════════════════════════
-   복도 그래프 & BFS & 유도선
+   복도 그래프 & 다익스트라 & 유도선
 ════════════════════════════════ */
 const corridorGraph = {
 
   /* ─────────────────────────────────────────
      본관 3층
-     상단복도 y≈22  /  중단(엘베) y≈49  /  하단(신관) y≈64
   ───────────────────────────────────────── */
   '본관 3층': {
     nodes: {
-      // 상단 (y=22)
       T1:{x:18,y:22}, T2:{x:36,y:22}, T4:{x:58,y:22}, T5:{x:80,y:22},
-      // 중단 (y=49)
       M1:{x:14,y:49}, M2:{x:18,y:49}, M3:{x:36,y:49},
       M4:{x:46,y:49}, M5:{x:58,y:49}, M6:{x:63,y:49}, M7:{x:80,y:49},
-      // 하단 (y=63)
       L0:{x:5,y:63},  L1:{x:14,y:63}, L2:{x:32,y:63},
       L3:{x:46,y:63}, L4:{x:58,y:63}, L5:{x:63,y:63},
       L7:{x:80,y:63}, L8:{x:94,y:63}
@@ -843,55 +826,42 @@ const corridorGraph = {
       ['T1','T2'],['T2','T4'],['T4','T5'],
       ['M1','M2'],['M2','M3'],['M3','M4'],['M4','M5'],['M5','M6'],['M6','M7'],
       ['L0','L1'],['L1','L2'],['L2','L3'],['L3','L4'],['L4','L5'],['L5','L7'],['L7','L8'],
-      // x=46 엘리베이터 세로 (중단→하단 직결)
       ['M4','L3'],
-      // 기타 세로 (상단↔중단)
       ['T1','M2'],['T2','M3'],['T4','M5'],['T5','M7'],
-      // 기타 세로 (중단↔하단)
       ['M1','L1'],['M3','L2'],['M7','L7']
     ]
   },
 
   /* ─────────────────────────────────────────
      본관 2층
-     상단복도 y≈25  /  메인 y≈39  /  하단(CT) y≈77
   ───────────────────────────────────────── */
   '본관 2층': {
     nodes: {
-      W:{x:2,  y:39},   // 신관 연결
-      A:{x:36, y:25},   // 에스컬레이터 위
-      B:{x:36, y:39},   // 에스컬레이터-메인 교차
-      C:{x:46, y:25},   // 엘리베이터 위
-      D:{x:46, y:39},   // 엘리베이터-메인 교차
-      E:{x:69, y:39},   // 영상의학 교차 (투시촬영실 위)
-      F:{x:76, y:25},   // 재활의학과
-      G:{x:76, y:39},   // 투시촬영실 위
-      // 투시촬영실 옆 세로 복도 (x=71, 올바른 CT3 경로)
-      J:{x:71, y:39},   // 투시촬영실-CT3 복도 진입
-      K:{x:71, y:71},   // CT3 앞 복도
-      // 하단 (다학제 방향)
-      H:{x:46, y:77},   // 다학제
-      I:{x:46, y:63}    // 엘리베이터 하단 교차
+      W:{x:2,  y:39},
+      A:{x:36, y:25},
+      B:{x:36, y:39},
+      C:{x:46, y:25},
+      D:{x:46, y:39},
+      E:{x:69, y:39},
+      F:{x:76, y:25},
+      G:{x:76, y:39},
+      J:{x:71, y:39},
+      K:{x:71, y:71},
+      H:{x:46, y:77},
+      I:{x:46, y:63}
     },
     edges:[
-      // 상단 수평 (y=25)
       ['A','C'],['C','F'],
-      // 메인 수평 (y=39)
       ['W','B'],['B','D'],['D','E'],['E','J'],['J','G'],
-      // 세로 (x=36 에스컬레이터)
       ['A','B'],
-      // 세로 (x=46 엘리베이터)
       ['C','D'],['D','I'],['I','H'],
-      // 세로 (x=71 투시촬영실 옆 — CT3 정방향)
       ['J','K'],
-      // 세로 (x=76 재활의학)
       ['F','G']
     ]
   },
 
   /* ─────────────────────────────────────────
      신관 1층
-     메인 복도 y≈53  /  상단(에스컬) y≈43
   ───────────────────────────────────────── */
   '신관 1층': {
     nodes: {
@@ -907,7 +877,6 @@ const corridorGraph = {
 
   /* ─────────────────────────────────────────
      본관 지하1층
-     상단 y≈30  /  메인 y≈68  /  하단(신관) y≈78
   ───────────────────────────────────────── */
   '본관 지하1층': {
     nodes: {
@@ -926,7 +895,6 @@ const corridorGraph = {
 
   /* ─────────────────────────────────────────
      신관 지하1층
-     세로(주차장) x≈25  /  메인 y≈68  /  하단(PET) y≈78
   ───────────────────────────────────────── */
   '신관 지하1층': {
     nodes: {
@@ -944,56 +912,60 @@ const corridorGraph = {
 
   /* ─────────────────────────────────────────
      신관 2층
-     상단 y≈33  /  메인 y≈43(본관연결)  /  하단(엘베) y≈55
   ───────────────────────────────────────── */
   '신관 2층': {
     nodes: {
-      // 상단 (흉부외과/심혈관 외래 아래)
       U1:{x:14,y:33}, U2:{x:59,y:33}, U3:{x:76,y:33}, U4:{x:97,y:33},
-      // 본관 연결 라인
       M0:{x:2,y:43},  M1:{x:14,y:43},
-      // 하단 (엘리베이터 라인)
       L0:{x:14,y:55}, L1:{x:18,y:55}, L2:{x:29,y:55},
       L3:{x:41,y:55}, L4:{x:52,y:55}, L5:{x:59,y:55}, L6:{x:76,y:55}
     },
     edges:[
-      // 상단
       ['U1','U2'],['U2','U3'],['U3','U4'],
-      // 본관 연결
       ['M0','M1'],
-      // 하단
       ['L0','L1'],['L1','L2'],['L2','L3'],['L3','L4'],['L4','L5'],['L5','L6'],
-      // 세로 좌 (x=14)
       ['U1','M1'],['M1','L0'],
-      // 세로 우 (x=59,76)
       ['U2','L5'],['U3','L6']
     ]
   },
 
   /* ─────────────────────────────────────────
-     신관 3층
-     상단 y≈43  /  메인(본관연결) y≈55  /  하단 y≈72
+     신관 3층  ★ 수정됨 ★
+     ─ 상단복도 y=44  (이비인후과 top=39.1% 기준, 복도는 그 아래)
+     ─ 메인복도 y=53  (에스컬레이터 top=52.6% 기준)
+     ─ 하단복도 y=72  (연결통로 top=72%, 엘리베이터 top=69.8%)
+     ─ U1b(x=36,y=44) 노드 추가 → 이비인후과(left=35.7%) 바로 앞
   ───────────────────────────────────────── */
   '신관 3층': {
     nodes: {
-      // 본관 연결통로 진입점 (하단 복도 레벨)
-      C0:{x:2, y:72},
-      // 상단 복도 (y=43) — 진료실 앞
-      U1:{x:28,y:43}, U2:{x:43,y:43}, U3:{x:56,y:43},
-      U4:{x:76,y:43}, U5:{x:88,y:43},
-      // 메인 복도 (y=55) — 에스컬레이터/엘리베이터
-      M1:{x:28,y:55}, M3:{x:43,y:55},
-      M4:{x:56,y:55}, M5:{x:76,y:55}, M6:{x:97,y:55},
-      // 하단 복도 (y=72) — 정신건강/치과/수납
-      L1:{x:28,y:72}, L2:{x:43,y:72}, L3:{x:56,y:72},
-      L4:{x:76,y:72}, L5:{x:43,y:85}
+      // 본관 연결통로 진입점
+      C0:{x:2,  y:72},
+      // 상단 복도 (y=44) — 이비인후과·비뇨의학과 앞
+      U1:{x:28, y:44},
+      U1b:{x:36,y:44},   // 이비인후과 바로 앞 (left≈35.7%)
+      U2:{x:43, y:44},
+      U3:{x:56, y:44},
+      U4:{x:76, y:44},
+      U5:{x:88, y:44},
+      // 메인 복도 (y=53) — 에스컬레이터 위치 기준 (top=52.6%)
+      M1:{x:28, y:53},
+      M3:{x:43, y:53},
+      M4:{x:56, y:53},
+      M5:{x:76, y:53},
+      M6:{x:97, y:53},
+      // 하단 복도 (y=72) — 연결통로·엘리베이터 레벨
+      L1:{x:28, y:72},
+      L2:{x:43, y:72},
+      L3:{x:56, y:72},
+      L4:{x:76, y:72},
+      L5:{x:43, y:85}
     },
     edges:[
-      // 본관 연결 → 하단 복도 (수평, y=72)
+      // 본관 연결 → 하단 복도
       ['C0','L1'],
-      // 상단 수평 (y=43)
-      ['U1','U2'],['U2','U3'],['U3','U4'],['U4','U5'],
-      // 메인 수평 (y=55)
+      // 상단 수평 (y=44)
+      ['U1','U1b'],['U1b','U2'],['U2','U3'],['U3','U4'],['U4','U5'],
+      // 메인 수평 (y=53)
       ['M1','M3'],['M3','M4'],['M4','M5'],['M5','M6'],
       // 하단 수평 (y=72)
       ['L1','L2'],['L2','L3'],['L3','L4'],
@@ -1020,11 +992,9 @@ function nearestNode(nodes, px, py){
   return best;
 }
 
-/* 거리 기반 다익스트라 (BFS 대체) — 홉 수가 아닌 실제 거리로 최단경로 탐색 */
+/* 다익스트라 */
 function dijkstra(nodes, edges, sId, eId){
   if(sId===eId) return [sId];
-
-  // 인접 리스트 구성
   const adj={};
   Object.keys(nodes).forEach(id=>adj[id]=[]);
   edges.forEach(([a,b])=>{
@@ -1032,18 +1002,12 @@ function dijkstra(nodes, edges, sId, eId){
     const w=Math.sqrt(dx*dx+dy*dy);
     adj[a].push({id:b,w}); adj[b].push({id:a,w});
   });
-
-  // 다익스트라
   const dist={};
   const prev={};
   Object.keys(nodes).forEach(id=>{dist[id]=Infinity; prev[id]=null;});
   dist[sId]=0;
-
-  // 미니힙 대신 단순 정렬 배열 (노드 수 적으므로 충분)
   const unvisited=new Set(Object.keys(nodes));
-
   while(unvisited.size>0){
-    // 현재 최소 거리 노드 선택
     let cur=null;
     unvisited.forEach(id=>{
       if(cur===null||dist[id]<dist[cur]) cur=id;
@@ -1051,14 +1015,12 @@ function dijkstra(nodes, edges, sId, eId){
     if(cur===null||dist[cur]===Infinity) break;
     if(cur===eId) break;
     unvisited.delete(cur);
-
     adj[cur].forEach(({id:nb,w})=>{
       if(!unvisited.has(nb)) return;
       const alt=dist[cur]+w;
       if(alt<dist[nb]){dist[nb]=alt;prev[nb]=cur;}
     });
   }
-
   if(dist[eId]===Infinity) return null;
   const path=[];
   let cur=eId;
@@ -1076,24 +1038,11 @@ function simplifyPath(pts){
     const next=pts[i+1];
     const dx1=cur.x-prev.x, dy1=cur.y-prev.y;
     const dx2=next.x-cur.x, dy2=next.y-cur.y;
-    // 방향이 바뀌면 (교차점) 유지, 같은 방향이면 제거
     const cross=Math.abs(dx1*dy2-dy1*dx2);
     if(cross>0.5) result.push(cur);
   }
   result.push(pts[pts.length-1]);
   return result;
-}
-
-/* 경로 좌표 배열 */
-function getCorridorPoints(floor, fromPct, toPct){
-  const g=corridorGraph[floor];
-  if(!g) return [fromPct, toPct];
-  const sId=nearestNode(g.nodes, fromPct.x, fromPct.y);
-  const eId=nearestNode(g.nodes, toPct.x,   toPct.y);
-  const ids=dijkstra(g.nodes, g.edges, sId, eId);
-  if(!ids) return [fromPct, toPct];
-  const raw=[...ids.map(id=>({x:g.nodes[id].x,y:g.nodes[id].y}))];
-  return simplifyPath(raw);
 }
 
 /* SVG 유도선 그리기 */
@@ -1112,7 +1061,6 @@ function drawGuidePath(wrapper, pts, delay){
   svg.setAttribute('viewBox','0 0 100 100');
   svg.setAttribute('preserveAspectRatio','none');
 
-  // 1층: 두꺼운 반투명 복도 채움 (회색 복도 안을 채우는 효과)
   const fill=document.createElementNS('http://www.w3.org/2000/svg','polyline');
   fill.setAttribute('points',ps);
   fill.setAttribute('class','path-fill');
@@ -1120,7 +1068,6 @@ function drawGuidePath(wrapper, pts, delay){
   fill.style.strokeDashoffset=len;
   fill.style.transition='stroke-dashoffset 1.6s ease '+d+'s';
 
-  // 2층: 얇은 진한 중앙선 (구분용)
   const line=document.createElementNS('http://www.w3.org/2000/svg','polyline');
   line.setAttribute('points',ps);
   line.setAttribute('class','path-line');
@@ -1128,7 +1075,6 @@ function drawGuidePath(wrapper, pts, delay){
   line.style.strokeDashoffset=len;
   line.style.transition='stroke-dashoffset 1.6s ease '+d+'s';
 
-  // 3층: 흰 점선 (방향감 — 지속 애니메이션)
   const dash=document.createElementNS('http://www.w3.org/2000/svg','polyline');
   dash.setAttribute('points',ps);
   dash.setAttribute('class','path-dash');
@@ -1150,15 +1096,12 @@ function applyGuidePath(wrapper, step, img){
   const from={x:parseFloat(step.pathFrom.left), y:parseFloat(step.pathFrom.top)};
   const to  ={x:parseFloat(step.pathTo.left),   y:parseFloat(step.pathTo.top)};
 
-  // 복도 그래프에서 출발·도착에 가장 가까운 노드 찾기
   const g=corridorGraph[step.floor];
   const sId=nearestNode(g.nodes, from.x, from.y);
   const eId=nearestNode(g.nodes, to.x,   to.y);
 
-  // 같은 노드면 선 불필요
   if(sId===eId) return;
 
-  // 복도 노드만으로 최단경로 탐색 (마커 원본 좌표 제외 → 벽 통과 방지)
   const ids=dijkstra(g.nodes, g.edges, sId, eId);
   if(!ids||ids.length<2) return;
   const pts=ids.map(id=>({x:g.nodes[id].x, y:g.nodes[id].y}));
@@ -1171,7 +1114,6 @@ function applyGuidePath(wrapper, step, img){
 }
 
 /* ── 경로 단계 계산 ── */
-/* 해당 층의 엘리베이터·에스컬레이터 마커 목록 반환 */
 function getTransportMarkers(floor){
   const result=[];
   if(elevators[floor])  result.push({type:'elevator',pos:elevators[floor]});
@@ -1191,7 +1133,6 @@ function getRouteSteps(src,dst,srcFloor,dstFloor){
   const sameBuilding=srcBuilding&&srcBuilding===dstBuilding;
   const sameFloor=srcFloor&&srcFloor===dstFloor;
 
-  /* 도착지만 */
   if(!src){
     steps.push({floor:dstFloor,floorLabel:dstFloor,icon:'🟠',
       desc:'주황색 마커가 목적지예요.',
@@ -1199,7 +1140,6 @@ function getRouteSteps(src,dst,srcFloor,dstFloor){
     return steps;
   }
 
-  /* 같은 층 */
   if(sameFloor){
     steps.push({floor:srcFloor,floorLabel:srcFloor,icon:'🟢',
       desc:'같은 층이에요! 초록색 → 출발지, 주황색 → 도착지',
@@ -1208,7 +1148,6 @@ function getRouteSteps(src,dst,srcFloor,dstFloor){
     return steps;
   }
 
-  /* 같은 건물, 다른 층 */
   if(sameBuilding){
     const _elevSrc=elevators[srcFloor];
     steps.push({floor:srcFloor,floorLabel:srcFloor,icon:'🟢',
@@ -1224,13 +1163,11 @@ function getRouteSteps(src,dst,srcFloor,dstFloor){
     return steps;
   }
 
-  /* 다른 건물 */
   const bl=getBridgeFloor(srcFloor,dstFloor);
   const srcBridge=srcBuilding+' '+bl;
   const dstBridge=dstBuilding+' '+bl;
 
   if(srcFloor===srcBridge){
-    /* 출발층 = 연결통로 층 */
     const conn=connectors[srcBridge];
     steps.push({floor:srcFloor,floorLabel:srcFloor,icon:'🟢',
       action:{type:'conn', label:'연결통로 이동', dest:dstBuilding+' '+bl, sub:'보라색 마커 방향으로 이동'},
@@ -1238,7 +1175,6 @@ function getRouteSteps(src,dst,srcFloor,dstFloor){
       pathFrom:src, pathTo:conn||src,
       nextDesc:bl+' 연결통로 → '+dstBuilding+'으로 이동'});
   } else {
-    /* 엘리베이터 타고 연결통로 층으로 */
     const _e2=elevators[srcFloor]||escalators[srcFloor];
     steps.push({floor:srcFloor,floorLabel:srcFloor,icon:'🟢',
       action:{type:'elev', label:'엘리베이터·에스컬레이터 이용', dest:srcBridge, sub:'갈색 마커 위치로 이동 후 탑승'},
@@ -1255,14 +1191,12 @@ function getRouteSteps(src,dst,srcFloor,dstFloor){
   }
 
   if(dstFloor===dstBridge){
-    /* 도착층 = 연결통로 층 */
     const conn=connectors[dstBridge];
     steps.push({floor:dstFloor,floorLabel:dstFloor,icon:'🟠',
       action:{type:'end', label:'목적지 도착', dest:'주황색 핀 위치', sub:'연결통로 진입 후 주황색 마커 방향으로 이동'},
       markers:[...(conn?[{type:'connector',pos:conn}]:[]),{type:'end',pos:dst}],
       pathFrom:conn||dst, pathTo:dst});
   } else {
-    /* 연결통로 진입 후 엘리베이터 필요 */
     const conn=connectors[dstBridge];
     const _e4=elevators[dstBridge]||escalators[dstBridge];
     steps.push({floor:dstBridge,floorLabel:dstBridge,icon:'🔀',
@@ -1289,7 +1223,6 @@ function renderSteps(steps){
   const total=steps.length;
 
   if(total>1){
-    // 경로 요약 바
     const summary=document.createElement('div');
     summary.className='route-summary fade-in';
     let summaryHTML='';
@@ -1301,7 +1234,6 @@ function renderSteps(steps){
     summary.innerHTML=summaryHTML;
     mapsContainer.appendChild(summary);
 
-    // 진행 단계 바
     const bar=document.createElement('div');
     bar.className='progress-bar fade-in';
     bar.id='routeProgressBar';
