@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v30</title>
+<title>강릉아산병원 안내지도 v31</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
@@ -148,15 +148,19 @@
   /* ── 단계 카드 ── */
   .step-block { margin-bottom:8px; display:none; }
   .step-block.active-step { display:block; }
-
-  /* 단일 지도(같은층/빠른검색)는 항상 표시 */
   .step-block.always-show { display:block; }
 
-  .step-heading{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:10px 14px;border-radius:10px;font-size:13.5px;font-weight:700;}
-  .step-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
-  .step-heading.type-start{background:#e8f5e9;color:#2e7d32;} .step-heading.type-start .step-num{background:#4caf50;color:#fff;}
-  .step-heading.type-mid{background:var(--mint-light);color:#00695c;} .step-heading.type-mid .step-num{background:var(--mint);color:#fff;}
-  .step-heading.type-end{background:var(--orange-light);color:#e65100;} .step-heading.type-end .step-num{background:var(--orange);color:#fff;}
+  /* 현재 층 강조 헤딩 */
+  .step-heading{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:12px 16px;border-radius:10px;font-size:15px;font-weight:800;letter-spacing:-0.3px;}
+  .step-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0;}
+  .step-heading.type-start{background:#e8f5e9;color:#1b5e20;} .step-heading.type-start .step-num{background:#2e7d32;color:#fff;}
+  .step-heading.type-mid{background:var(--mint-light);color:#004d40;} .step-heading.type-mid .step-num{background:var(--mint);color:#fff;}
+  .step-heading.type-end{background:var(--orange-light);color:#bf360c;} .step-heading.type-end .step-num{background:#e64a19;color:#fff;}
+  /* 출발/도착 레이블 배지 */
+  .step-role-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:auto;flex-shrink:0;}
+  .type-start .step-role-badge{background:#2e7d32;color:#fff;}
+  .type-end   .step-role-badge{background:#e64a19;color:#fff;}
+  .type-mid   .step-role-badge{background:var(--mint);color:#fff;}
 
   /* ── 지금 할 일 액션 박스 (지도 위) ── */
   .action-box {
@@ -166,6 +170,7 @@
     border-bottom:none;
   }
   .action-box.elev { background:#3e1f00; }
+  .action-box.esc  { background:#3e2800; }  /* 에스컬레이터 구분 */
   .action-box.conn { background:#2d1457; }
   .action-box.end  { background:#7a2e00; }
   .action-box.walk { background:#1b3a1e; }
@@ -226,23 +231,37 @@
 
   /* ── 다음 단계 버튼 ── */
   .next-btn {
-    width:100%; margin-top:10px; padding:14px;
+    width:100%; margin-top:10px; padding:15px;
     background:var(--mint); color:#fff;
-    border:none; border-radius:10px;
+    border:none; border-radius:12px;
     font-size:15px; font-weight:800; font-family:'Noto Sans KR',sans-serif;
     cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px;
     transition:background .15s, transform .15s;
-    letter-spacing:-0.2px;
+    letter-spacing:-0.3px;
+    box-shadow: 0 4px 14px rgba(0,150,136,0.35);
   }
   .next-btn:hover { background:#00796b; transform:translateY(-1px); }
+  /* 이전 단계 버튼 — 더 잘 보이게 */
   .prev-btn {
-    width:100%; margin-top:6px; padding:10px;
-    background:transparent; color:var(--text-sub);
+    width:100%; margin-top:8px; padding:11px;
+    background:#f5f7f6; color:var(--text-sub);
     border:1.5px solid var(--border); border-radius:10px;
-    font-size:13px; font-weight:600; font-family:'Noto Sans KR',sans-serif;
-    cursor:pointer; transition:border-color .15s;
+    font-size:13px; font-weight:700; font-family:'Noto Sans KR',sans-serif;
+    cursor:pointer; transition:all .15s;
+    display:flex; align-items:center; justify-content:center; gap:6px;
   }
-  .prev-btn:hover { border-color:var(--mint); color:var(--mint); }
+  .prev-btn:hover { border-color:var(--mint); color:var(--mint); background:#e0f2f1; }
+  /* 점선 유도선 애니메이션 (경로선 위에 흐르는 점) */
+  @keyframes dashFlow {
+    to { stroke-dashoffset: -20; }
+  }
+  .path-dash {
+    fill:none; stroke:#fff; stroke-width:1.0;
+    stroke-dasharray: 3 7;
+    stroke-linecap: round;
+    animation: dashFlow 0.8s linear infinite;
+    opacity: 0.7;
+  }
 
   /* 기존 호환용 (빠른검색 단일 지도) */
   .step-desc{font-size:12.5px;color:var(--text-sub);margin-bottom:10px;padding:0 4px;line-height:1.6;}
@@ -250,10 +269,10 @@
 
   /* 유도선 SVG */
   .path-svg{position:absolute;top:0;left:0;width:100%;height:100%;z-index:5;pointer-events:none;overflow:visible;}
-  /* 복도 바닥 채움 (회색 복도 안을 꽉 채우는 두꺼운 반투명 레이어) */
-  .path-fill{fill:none;stroke:rgba(255,140,66,0.35);stroke-width:4.5;stroke-linecap:square;stroke-linejoin:miter;}
-  /* 중앙 진한 유도선 (애니메이션) */
-  .path-line{fill:none;stroke:#ff8c42;stroke-width:2.2;stroke-linecap:square;stroke-linejoin:miter;opacity:1;}
+  /* 복도 채움 레이어 */
+  .path-fill{fill:none;stroke:rgba(255,140,66,0.30);stroke-width:5;stroke-linecap:square;stroke-linejoin:miter;}
+  /* 중앙 진한 유도선 */
+  .path-line{fill:none;stroke:#ff8c42;stroke-width:2.4;stroke-linecap:square;stroke-linejoin:miter;opacity:1;}
 
   /* 지도 */
   .map-wrapper{position:relative;width:100%;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.14);}
@@ -656,7 +675,13 @@ function getTransportBadge(step){
   if(!step.nextDesc) return null;
   const t=step.nextDesc;
   if(t.includes('연결통로')) return {cls:'conn', icon:'🔀', label:'연결통로 이동'};
-  if(t.includes('엘리베이터')||t.includes('에스컬레이터')) return {cls:'elev', icon:'🛗', label:'엘리베이터·에스컬레이터 이용'};
+  // 엘리베이터와 에스컬레이터 구분
+  if(t.includes('에스컬레이터')&&!t.includes('엘리베이터'))
+    return {cls:'elev', icon:'🪜', label:'에스컬레이터 이용'};
+  if(t.includes('엘리베이터')&&!t.includes('에스컬레이터'))
+    return {cls:'elev', icon:'🛗', label:'엘리베이터 이용'};
+  if(t.includes('엘리베이터')||t.includes('에스컬레이터'))
+    return {cls:'elev', icon:'🛗🪜', label:'엘리베이터·에스컬레이터 이용'};
   return {cls:'walk', icon:'🚶', label:'도보 이동'};
 }
 
@@ -671,10 +696,14 @@ function createMapBlock(step, index, total){
   block.className='step-block fade-in'+(total===1?' always-show':'');
   if(total>1 && index===0) block.classList.add('active-step');
 
-  // 헤딩
+  // 헤딩 (출발/도착 역할 배지 추가)
+  const roleLabel = index===0?'출발':(index===total-1?'도착':'경유');
   const heading=document.createElement('div');
   heading.className='step-heading '+typeClass;
-  heading.innerHTML=`<div class="step-num">${index+1}</div><div>${step.icon} ${step.floorLabel}</div>`;
+  heading.innerHTML=
+    `<div class="step-num">${index+1}</div>`+
+    `<div style="flex:1">${step.icon} ${step.floorLabel}</div>`+
+    (total>1?`<span class="step-role-badge">${roleLabel}</span>`:'');
   block.appendChild(heading);
 
   // 액션 박스 (지도 위 강조)
@@ -736,14 +765,21 @@ function createMapBlock(step, index, total){
     if(index<total-1){
       const nb=document.createElement('button');
       nb.className='next-btn';
-      nb.innerHTML=`다음 단계로 이동 <span style="font-size:18px">→</span>`;
+      // 이동수단에 맞는 액션 텍스트
+      const badge=getTransportBadge(step);
+      const destMatch=(step.nextDesc||'').match(/→\s*(.+)$/);
+      const destTxt=destMatch?destMatch[1]:'다음 단계';
+      let btnIcon='🚶', btnTxt=destTxt+'으로 이동';
+      if(badge&&badge.cls==='elev') { btnIcon='🛗'; btnTxt='탑승 후 '+destTxt+'으로 이동'; }
+      else if(badge&&badge.cls==='conn') { btnIcon='🔀'; btnTxt='연결통로 통해 '+destTxt+'으로 이동'; }
+      nb.innerHTML=`${btnIcon} ${btnTxt} <span style="font-size:18px;margin-left:4px">→</span>`;
       nb.onclick=()=>goToStep(index+1, total);
       block.appendChild(nb);
     }
     if(index>0){
       const pb=document.createElement('button');
       pb.className='prev-btn';
-      pb.innerHTML='← 이전 단계';
+      pb.innerHTML='← 이전 단계로 돌아가기';
       pb.onclick=()=>goToStep(index-1, total);
       block.appendChild(pb);
     }
@@ -1092,8 +1128,14 @@ function drawGuidePath(wrapper, pts, delay){
   line.style.strokeDashoffset=len;
   line.style.transition='stroke-dashoffset 1.6s ease '+d+'s';
 
+  // 3층: 흰 점선 (방향감 — 지속 애니메이션)
+  const dash=document.createElementNS('http://www.w3.org/2000/svg','polyline');
+  dash.setAttribute('points',ps);
+  dash.setAttribute('class','path-dash');
+
   svg.appendChild(fill);
   svg.appendChild(line);
+  svg.appendChild(dash);
   wrapper.appendChild(svg);
 
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
