@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v44</title>
+<title>강릉아산병원 안내지도 v45</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
@@ -1353,7 +1353,7 @@ function handleAdminClick(e){
     #corridorEditor {
       position:fixed; top:0; left:0; right:0; bottom:0;
       background:#f0f4f3; z-index:10000; display:flex; flex-direction:column;
-      font-family:'Noto Sans KR',sans-serif;
+      font-family:'Noto Sans KR',sans-serif; overflow:hidden;
     }
     #edToolbar {
       background:#009688; color:#fff; padding:8px 10px;
@@ -1433,14 +1433,43 @@ function handleAdminClick(e){
       display:none; position:fixed; inset:0; background:rgba(0,0,0,.5);
       z-index:10999;
     }
-    #edImportBox, #edPreviewBox {
+    /* 불러오기: 기존 팝업 유지 */
+    #edImportBox {
       display:none; position:fixed; top:50%; left:50%;
       transform:translate(-50%,-50%);
       background:#fff; border-radius:14px; padding:20px;
       box-shadow:0 8px 40px rgba(0,0,0,0.3);
       z-index:11000; width:90%; max-width:600px;
     }
-    #edImportBox h3, #edPreviewBox h3 { font-size:14px; margin-bottom:10px; color:#009688; }
+    #edImportBox h3 { font-size:14px; margin-bottom:10px; color:#009688; }
+
+    /* 경로 미리보기: 지도 아래 패널 (팝업 아님) */
+    #edPreviewPanel {
+      display:none;
+      background:#fff; border-top:2px solid var(--mint,#009688);
+      padding:10px 14px;
+      flex-shrink:0;
+    }
+    #edPreviewPanel.active { display:block; }
+    .ed-preview-row {
+      display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;
+      margin-bottom:8px;
+    }
+    .ed-preview-row input {
+      flex:1; min-width:100px; padding:7px 10px;
+      border:1.5px solid #dde8e5; border-radius:8px;
+      font-size:13px; font-family:'Noto Sans KR',sans-serif;
+    }
+    .ed-preview-row label {
+      font-size:11px; font-weight:700; color:#666;
+      display:block; margin-bottom:3px;
+    }
+    #edPreviewResult {
+      font-size:11.5px; color:#2c3e35;
+      background:#f5f7f6; border-radius:8px;
+      padding:8px 10px; line-height:1.7;
+      white-space:pre-wrap; max-height:80px; overflow-y:auto;
+    }
     #edImportText {
       width:100%; height:200px; font-size:11px; font-family:monospace;
       border:1px solid #dde8e5; border-radius:8px; padding:8px;
@@ -1475,6 +1504,23 @@ function handleAdminClick(e){
       <span id="edSaveStatus" style="margin-left:auto;font-size:11px;color:#43a047;font-weight:600;"></span>
       <span id="edStatusMsg" style="font-size:11px;color:#999">드래그=이동 | 엣지모드: 두 노드 순서대로 클릭</span>
     </div>
+    <div id="edPreviewPanel">
+      <div class="ed-preview-row">
+        <div style="flex:1;min-width:100px">
+          <label>출발지</label>
+          <input id="edPreviewFrom" type="text" placeholder="예: 신경과" list="edFromList">
+          <datalist id="edFromList"></datalist>
+        </div>
+        <div style="flex:1;min-width:100px">
+          <label>도착지</label>
+          <input id="edPreviewTo" type="text" placeholder="예: ct실" list="edToList">
+          <datalist id="edToList"></datalist>
+        </div>
+        <button class="ed-btn orange" id="edPreviewRun" style="padding:8px 16px;align-self:flex-end">▶ 실행</button>
+        <button class="ed-btn red"    id="edPreviewClose" style="padding:8px 12px;align-self:flex-end">✕</button>
+      </div>
+      <div id="edPreviewResult"></div>
+    </div>
   `;
   document.body.appendChild(edDiv);
 
@@ -1506,29 +1552,7 @@ function handleAdminClick(e){
   `;
   document.body.appendChild(importBox);
 
-  const previewBox = document.createElement('div');
-  previewBox.id = 'edPreviewBox';
-  previewBox.innerHTML = `
-    <h3>🔍 경로 미리보기</h3>
-    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-      <div style="flex:1;min-width:140px;">
-        <label style="font-size:12px;font-weight:600;color:#666;display:block;margin-bottom:4px;">출발지</label>
-        <input id="edPreviewFrom" type="text" placeholder="예: 신경과" list="edFromList"
-          style="width:100%;padding:8px 10px;border:1.5px solid #dde8e5;border-radius:8px;font-size:13px;font-family:'Noto Sans KR',sans-serif;">
-        <datalist id="edFromList"></datalist>
-      </div>
-      <div style="flex:1;min-width:140px;">
-        <label style="font-size:12px;font-weight:600;color:#666;display:block;margin-bottom:4px;">도착지</label>
-        <input id="edPreviewTo" type="text" placeholder="예: ct실" list="edToList"
-          style="width:100%;padding:8px 10px;border:1.5px solid #dde8e5;border-radius:8px;font-size:13px;font-family:'Noto Sans KR',sans-serif;">
-        <datalist id="edToList"></datalist>
-      </div>
-      <button class="ed-btn orange" id="edPreviewRun" style="align-self:flex-end;padding:9px 18px">▶ 미리보기</button>
-    </div>
-    <div id="edPreviewResult" style="font-size:12px;color:#2c3e35;background:#f5f7f6;border-radius:8px;padding:10px;min-height:40px;line-height:1.7;white-space:pre-wrap;"></div>
-    <button class="ed-btn red" id="edPreviewClose" style="width:100%;margin-top:10px;">닫기</button>
-  `;
-  document.body.appendChild(previewBox);
+  // previewBox → #edPreviewPanel (지도 아래 패널로 이동됨)
 
   const overlay = document.createElement('div');
   overlay.id = 'edOverlay';
@@ -1948,7 +1972,13 @@ function handleAdminClick(e){
     importBox.style.display='block'; overlay.style.display='block';
   });
   document.getElementById('edPreview').addEventListener('click', () => {
-    previewBox.style.display='block'; overlay.style.display='block';
+    const panel = document.getElementById('edPreviewPanel');
+    const isActive = panel.classList.contains('active');
+    panel.classList.toggle('active');
+    // 패널 열릴 때 입력 포커스
+    if (!isActive) {
+      setTimeout(()=>document.getElementById('edPreviewFrom').focus(), 50);
+    }
   });
 
   document.getElementById('edClose').addEventListener('click', () => {
@@ -1979,7 +2009,8 @@ function handleAdminClick(e){
   // 미리보기 팝업
   document.getElementById('edPreviewRun').addEventListener('click', runPreview);
   document.getElementById('edPreviewClose').addEventListener('click', () => {
-    previewBox.style.display='none'; overlay.style.display='none'; renderAll();
+    document.getElementById('edPreviewPanel').classList.remove('active');
+    renderAll();
   });
   document.getElementById('edPreviewFrom').addEventListener('keydown', e => { if(e.key==='Enter') runPreview(); });
   document.getElementById('edPreviewTo').addEventListener('keydown',   e => { if(e.key==='Enter') runPreview(); });
@@ -1988,7 +2019,6 @@ function handleAdminClick(e){
     if (e.target===overlay) {
       exportBox.style.display='none';
       importBox.style.display='none';
-      previewBox.style.display='none';
       overlay.style.display='none';
       renderAll();
     }
