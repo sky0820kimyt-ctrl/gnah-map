@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v42</title>
+<title>강릉아산병원 안내지도 v43</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
@@ -1374,12 +1374,18 @@ function handleAdminClick(e){
     #edStatus {
       font-size:12px; margin-left:auto; opacity:.85; white-space:nowrap;
     }
-    #edCanvas {
-      flex:1; position:relative; overflow:hidden; background:#fff;
-    }
+
     #edMapImg {
-      width:100%; height:100%; object-fit:contain; display:block;
+      /* object-fit 제거: 실제 이미지 크기 = getBoundingClientRect 크기 일치 */
+      display:block;
+      max-width:100%; max-height:100%;
+      width:auto; height:auto;
+      position:absolute; top:50%; left:50%;
+      transform:translate(-50%,-50%);
       user-select:none; -webkit-user-drag:none;
+    }
+    #edCanvas {
+      flex:1; position:relative; overflow:hidden; background:#e8eeec;
     }
     #edSvg {
       position:absolute; top:0; left:0; width:100%; height:100%;
@@ -1594,13 +1600,31 @@ function handleAdminClick(e){
   }
 
   // ── 렌더링 ──
-  function getImgRect() { return mapImg.getBoundingClientRect(); }
+  function getImgRect() {
+    // object-fit 없이 absolute center 방식이므로 getBoundingClientRect() = 실제 이미지 크기
+    return mapImg.getBoundingClientRect();
+  }
   function getCanvasRect() { return canvas.getBoundingClientRect(); }
+
+  /* 퍼센트 좌표 → 캔버스 픽셀 좌표 변환
+     이미지가 캔버스 중앙에 위치하므로 offset 계산이 핵심 */
   function pctToCanvas(xPct, yPct) {
-    const ir = getImgRect(), cr = getCanvasRect();
+    const ir = getImgRect();
+    const cr = getCanvasRect();
     return {
-      x: (ir.left - cr.left) + xPct/100 * ir.width,
-      y: (ir.top  - cr.top)  + yPct/100 * ir.height
+      x: (ir.left - cr.left) + xPct / 100 * ir.width,
+      y: (ir.top  - cr.top)  + yPct / 100 * ir.height
+    };
+  }
+
+  /* 캔버스 픽셀 → 이미지 퍼센트 좌표 변환 */
+  function canvasToPct(clientX, clientY) {
+    const ir = getImgRect();
+    const xP = Math.round((clientX - ir.left) / ir.width  * 1000) / 10;
+    const yP = Math.round((clientY - ir.top)  / ir.height * 1000) / 10;
+    return {
+      x: Math.max(0, Math.min(100, xP)),
+      y: Math.max(0, Math.min(100, yP))
     };
   }
 
@@ -1672,8 +1696,10 @@ function handleAdminClick(e){
         selectedNode = id;
         selLabel.textContent = `${id} (${n.x}, ${n.y})`;
         dragging = id;
-        dragOffX = clientX - pos.x - canvas.getBoundingClientRect().left;
-        dragOffY = clientY - pos.y - canvas.getBoundingClientRect().top;
+        // 이미지 기준 오프셋: 노드 중심과 터치/클릭 위치의 차이
+        // dragOff를 0으로 하면 손가락/마우스 위치 = 노드 중심
+        dragOffX = 0;
+        dragOffY = 0;
         renderAll();
       }
       function handleNodeTap(clientX, clientY) {
@@ -1709,11 +1735,8 @@ function handleAdminClick(e){
     if (!dragging) return;
     const g = workGraph[currentFloor];
     if (!g||!g.nodes[dragging]) return;
-    const ir = getImgRect();
-    const cx = clientX - dragOffX - ir.left;
-    const cy = clientY - dragOffY - ir.top;
-    const xP = Math.max(0,Math.min(100, Math.round(cx/ir.width*1000)/10));
-    const yP = Math.max(0,Math.min(100, Math.round(cy/ir.height*1000)/10));
+    // dragOff 보정 후 퍼센트 계산
+    const {x:xP, y:yP} = canvasToPct(clientX - dragOffX, clientY - dragOffY);
     g.nodes[dragging].x = xP;
     g.nodes[dragging].y = yP;
     coordLabel.textContent = `x:${xP} y:${yP}`;
@@ -1738,9 +1761,7 @@ function handleAdminClick(e){
 
   // 클릭으로 노드 추가
   function addNodeAt(clientX, clientY) {
-    const ir = getImgRect();
-    const xP = Math.round((clientX-ir.left)/ir.width*1000)/10;
-    const yP = Math.round((clientY-ir.top)/ir.height*1000)/10;
+    const {x:xP, y:yP} = canvasToPct(clientX, clientY);
     const g = workGraph[currentFloor];
     const newId = prompt(`새 노드 ID:\n좌표: x=${xP}, y=${yP}`);
     if (!newId?.trim()) return;
