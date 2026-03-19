@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v47</title>
+<title>강릉아산병원 안내지도 v48</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
@@ -264,9 +264,75 @@
     opacity: 0.7;
   }
 
-  /* 기존 호환용 (빠른검색 단일 지도) */
+  /* 기존 호환용 */
   .step-desc{font-size:12.5px;color:var(--text-sub);margin-bottom:10px;padding:0 4px;line-height:1.6;}
   .transport-badge-wrap { display:none; }
+
+  /* ── 단계 인지 헤더 (고정 바) ── */
+  #stepNavBar {
+    display:none; max-width:700px; margin:0 auto 12px;
+    background:var(--card); border:1px solid var(--border);
+    border-radius:12px; box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  #stepNavBar.visible { display:block; }
+  .snb-top {
+    background:var(--mint); color:#fff;
+    padding:8px 14px; display:flex; align-items:center; gap:8px;
+    font-size:12px; font-weight:700;
+  }
+  .snb-counter {
+    margin-left:auto; background:rgba(255,255,255,0.25);
+    border-radius:20px; padding:2px 10px; font-size:11px;
+  }
+  .snb-route {
+    padding:10px 14px; display:flex; align-items:center; gap:6px;
+    font-size:14px; font-weight:700; flex-wrap:wrap;
+  }
+  .snb-loc {
+    background:var(--bg); border-radius:20px;
+    padding:4px 12px; font-size:13px; font-weight:700;
+  }
+  .snb-loc.current { border:2px solid var(--mint); color:var(--mint); }
+  .snb-loc.next    { border:2px solid var(--orange); color:#e65100; }
+  .snb-arrow { color:var(--text-sub); font-size:16px; }
+  .snb-action {
+    padding:10px 14px 12px; font-size:13px; color:var(--text-sub);
+    border-top:1px solid var(--border); line-height:1.5;
+    display:flex; align-items:center; gap:8px;
+  }
+  .snb-action-icon { font-size:20px; flex-shrink:0; }
+
+  /* ── 빠른 목적지 버튼 ── */
+  .quick-dest-row {
+    display:flex; gap:7px; flex-wrap:wrap;
+    margin-top:12px;
+  }
+  .quick-dest-btn {
+    padding:7px 13px; border-radius:20px;
+    border:1.5px solid var(--border); background:var(--bg);
+    font-size:12.5px; font-weight:600; font-family:'Noto Sans KR',sans-serif;
+    color:var(--text); cursor:pointer; transition:all .15s;
+  }
+  .quick-dest-btn:hover { border-color:var(--orange); background:var(--orange-light); color:#e65100; }
+
+  /* ── 처음부터 다시 버튼 ── */
+  .restart-btn {
+    width:100%; margin-top:6px; padding:9px;
+    background:transparent; color:#999;
+    border:1px solid #dde; border-radius:8px;
+    font-size:12px; font-weight:600; font-family:'Noto Sans KR',sans-serif;
+    cursor:pointer;
+  }
+  .restart-btn:hover { color:var(--text-sub); border-color:#bbb; }
+
+  /* ── 마커: SVG 핀 스타일 ── */
+  .marker-pin {
+    position:absolute; z-index:10; transform:translate(-50%,-100%);
+    filter:drop-shadow(0 2px 4px rgba(0,0,0,0.35));
+    animation:pinFloat 2s ease-in-out infinite;
+  }
+  .marker-pin svg { display:block; }
 
   /* 유도선 SVG */
   .path-svg{position:absolute;top:0;left:0;width:100%;height:100%;z-index:5;pointer-events:none;overflow:visible;}
@@ -389,6 +455,12 @@
       </div>
     </div>
     <button id="btnRoute" class="main-btn btn-route" onclick="navigateRoute()" disabled>🧭 경로 안내</button>
+    <div class="quick-dest-row" id="quickDestRow">
+      <div style="font-size:11px;font-weight:700;color:var(--text-sub);width:100%;margin-bottom:2px;">⚡ 자주 찾는 곳</div>
+      <button class="quick-dest-btn" onclick="quickDest('영상의학과 접수')">영상의학과 접수</button>
+      <button class="quick-dest-btn" onclick="quickDest('채혈실')">채혈실</button>
+      <button class="quick-dest-btn" onclick="quickDest('수납(본관3층)')">수납</button>
+    </div>
   </div>
 
   <div class="tab-panel" id="panelQuick">
@@ -423,6 +495,21 @@
   <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div>연결통로</div>
 </div>
 
+<div id="stepNavBar">
+  <div class="snb-top">
+    <span id="snbStatus">📍 현재 위치</span>
+    <span class="snb-counter" id="snbCounter"></span>
+  </div>
+  <div class="snb-route">
+    <span class="snb-loc current" id="snbCurrent"></span>
+    <span class="snb-arrow">→</span>
+    <span class="snb-loc next" id="snbNext"></span>
+  </div>
+  <div class="snb-action">
+    <span class="snb-action-icon" id="snbActionIcon">🚶</span>
+    <span id="snbActionText">이동 안내</span>
+  </div>
+</div>
 <div id="mapsContainer"></div>
 
 <div id="imagePopup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:5000;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
@@ -629,6 +716,9 @@ function hideResults(){
   mapsContainer.innerHTML='';
   resultChip.style.display='none';
   legendBox.style.display='none';
+  _navSteps=[];
+  const nb=document.getElementById('stepNavBar');
+  if(nb) nb.classList.remove('visible');
 }
 function showLoading(){loadingOverlay.style.display='flex';}
 function hideLoading(){loadingOverlay.style.display='none';}
@@ -805,6 +895,14 @@ function createMapBlock(step, index, total){
       pb.innerHTML='← 이전 단계로 돌아가기';
       pb.onclick=()=>goToStep(index-1, total);
       block.appendChild(pb);
+      // 처음부터 다시 (마지막 단계에서만)
+      if(index===total-1){
+        const rb=document.createElement('button');
+        rb.className='restart-btn';
+        rb.textContent='↺ 처음부터 다시';
+        rb.onclick=restartNav;
+        block.appendChild(rb);
+      }
     }
   }
   return block;
@@ -819,11 +917,37 @@ function goToStep(idx, total){
     b.classList.remove('active-step');
     if(i===idx) b.classList.add('active-step');
   }
-  // 진행바 업데이트
   updateProgressBar(idx, total);
-  // 스크롤
-  const pb=document.getElementById('routeProgressBar');
-  if(pb) pb.scrollIntoView({behavior:'smooth',block:'start'});
+  updateStepNavBar(idx, total);
+  // 스크롤: stepNavBar 기준
+  const nb=document.getElementById('stepNavBar');
+  if(nb) nb.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* stepNavBar 업데이트 */
+let _navSteps=[];
+function updateStepNavBar(idx, total){
+  const bar=document.getElementById('stepNavBar');
+  if(!bar||!_navSteps.length) return;
+  bar.classList.add('visible');
+  const step=_navSteps[idx];
+  const nextStep=_navSteps[idx+1];
+
+  document.getElementById('snbCounter').textContent=`${idx+1} / ${total}단계`;
+  document.getElementById('snbStatus').textContent= idx===0?'📍 현재 위치':idx===total-1?'🏁 목적지':'🚶 이동 중';
+  document.getElementById('snbCurrent').textContent=step?step.floorLabel:'';
+  document.getElementById('snbNext').textContent=nextStep?nextStep.floorLabel:'목적지';
+
+  // 액션 아이콘/텍스트
+  const badge=step?getTransportBadge(step):null;
+  const icon=idx===total-1?'🏁':badge?badge.icon:'🚶';
+  const destMatch=step&&step.nextDesc?(step.nextDesc.match(/→\s*(.+)$/))||['','다음 단계']:['','목적지'];
+  let actionTxt=idx===total-1?'목적지에 도착했어요! 주황색 핀을 확인하세요'
+    :badge&&badge.cls==='elev'?`🛗 엘리베이터·에스컬레이터를 타고 ${destMatch[1]}으로 이동`
+    :badge&&badge.cls==='conn'?`🔀 연결통로를 통해 ${destMatch[1]}으로 이동`
+    :`${destMatch[1]} 방향으로 이동하세요`;
+  document.getElementById('snbActionIcon').textContent=icon;
+  document.getElementById('snbActionText').textContent=actionTxt;
 }
 
 /* ── 진행바 업데이트 ── */
@@ -1231,6 +1355,12 @@ function renderSteps(steps){
   currentStepIndex=0;
   totalSteps=steps.length;
   const total=steps.length;
+  _navSteps=steps; // navBar용 저장
+  if(total<=1){
+    document.getElementById('stepNavBar').classList.remove('visible');
+  } else {
+    updateStepNavBar(0, total);
+  }
 
   if(total>1){
     // 진행 단계 바
@@ -1256,6 +1386,26 @@ function renderSteps(steps){
 }
 
 /* ── 빠른 위치 찾기 ── */
+/* ── 빠른 목적지 선택 ── */
+function quickDest(dest){
+  document.getElementById('endInput').value=dest;
+  updateBtnState();
+  // 출발지가 없으면 그냥 위치 표시
+  if(!startInput.value.trim()){
+    searchInput.value=dest; searchPlace(); return;
+  }
+  navigateRoute();
+}
+
+/* ── 처음부터 다시 ── */
+function restartNav(){
+  startInput.value=''; endInput.value='';
+  toggleClear('startInput','clearStart'); toggleClear('endInput','clearEnd');
+  updateBtnState(); hideResults();
+  startInput.focus();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
 function searchPlace(){
   const raw=searchInput.value.trim();
   if(!raw){showResult('⚠️ 안내','검색어를 입력해주세요.',false);hideResults();return;}
