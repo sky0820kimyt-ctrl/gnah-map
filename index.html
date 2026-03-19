@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v48</title>
+<title>강릉아산병원 안내지도 v47</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
@@ -1437,18 +1437,7 @@ function navigateRoute(){
   const sameBuilding=srcBuilding&&srcBuilding===dstBuilding;
   const sameFloor=srcFloor&&srcFloor===dstFloor;
 
-  let title=src?`🧭 ${startKey} → ${endKey}`:`📍 ${endKey}`;
-  let body='';
-  if(!src) body=`${dstFloor}에 위치해 있어요.`;
-  else if(sameFloor) body='같은 층이에요! 바로 이동하시면 됩니다 🙂';
-  else if(sameBuilding) body=`같은 건물 · 다른 층\n<strong>🛗 엘리베이터·에스컬레이터를 이용해 ${dstFloor}으로 이동하세요!</strong>`;
-  else {
-    const bl=getBridgeFloor(srcFloor,dstFloor);
-    body=`본관 ↔ 신관 ${bl} 연결통로를 이용하는 경로예요 🚶\n아래 단계를 순서대로 따라가세요.`;
-  }
-
-  showResult(title,body,false);
-  legendBox.style.display='flex';
+    legendBox.style.display='flex';
 
   const steps=getRouteSteps(src,dst,srcFloor,dstFloor);
   renderSteps(steps);
