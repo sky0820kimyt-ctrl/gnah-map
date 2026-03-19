@@ -79,6 +79,7 @@
   .chip-title{font-size:13px;font-weight:700;color:var(--mint);margin-bottom:4px;}
   .orange-accent .chip-title{color:var(--orange);}
   .chip-body{font-size:13.5px;color:var(--text-sub);line-height:1.6;white-space:pre-line;}
+  .chip-body strong{font-size:16px;color:var(--text);font-weight:800;display:block;margin-top:4px;}
 
   /* 범례 */
   .legend{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin:0 auto 20px;max-width:700px;padding:0 4px;}
@@ -424,11 +425,39 @@
 
 <div id="mapsContainer"></div>
 
-<div id="imagePopup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:5000;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
-  <div id="popupInner" style="position:relative;max-width:95%;max-height:95%;">
-    <button id="popupClose" onclick="closeImagePopup()"
-      style="position:absolute;top:-44px;right:-10px;background:var(--orange);border:none;color:#fff;font-size:20px;padding:8px 14px;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;font-weight:700;">✕ 닫기</button>
-    <img id="popupImg" src="" style="max-width:100%;max-height:90vh;border-radius:12px;display:block;">
+<div id="imagePopup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:5000;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+  <div id="popupInner" style="position:relative;max-width:96%;max-height:92vh;overflow:hidden;border-radius:14px;">
+    <!-- 상단 안내 바 -->
+    <div id="popupBar" style="
+      position:absolute;top:0;left:0;right:0;z-index:20;
+      background:linear-gradient(rgba(0,0,0,0.7),rgba(0,0,0,0));
+      padding:10px 14px 24px;
+      display:flex;align-items:center;justify-content:space-between;">
+      <span id="popupFloorLabel" style="color:#fff;font-size:13px;font-weight:700;opacity:.9;"></span>
+      <div style="display:flex;gap:8px;">
+        <button id="popupZoomIn"  style="background:rgba(255,255,255,0.2);border:none;color:#fff;font-size:18px;width:34px;height:34px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;">＋</button>
+        <button id="popupZoomOut" style="background:rgba(255,255,255,0.2);border:none;color:#fff;font-size:18px;width:34px;height:34px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;">－</button>
+        <button id="popupClose" onclick="closeImagePopup()"
+          style="background:var(--orange);border:none;color:#fff;font-size:13px;font-weight:700;padding:6px 14px;border-radius:20px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">✕ 닫기</button>
+      </div>
+    </div>
+    <!-- 지도 이미지 + SVG 오버레이 -->
+    <div id="popupMapWrap" style="position:relative;overflow:hidden;border-radius:14px;touch-action:none;">
+      <img id="popupImg" src="" style="max-width:100%;max-height:90vh;border-radius:14px;display:block;">
+      <!-- 스포트라이트: 경로 밖을 어둡게 -->
+      <svg id="popupDimSvg" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:6;" xmlns="http://www.w3.org/2000/svg"></svg>
+      <!-- 경로선 -->
+      <svg id="popupPathSvg" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:7;" viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <!-- 하단 힌트 -->
+    <div id="popupHint" style="
+      position:absolute;bottom:0;left:0;right:0;z-index:20;
+      background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,0.65));
+      padding:20px 14px 12px;
+      text-align:center;font-size:12px;color:rgba(255,255,255,0.75);
+      font-family:'Noto Sans KR',sans-serif;">
+      핀치로 확대 · 두 손가락으로 이동 · 탭하면 닫기
+    </div>
   </div>
 </div>
 
@@ -607,7 +636,7 @@ function triggerFadeIn(el){el.classList.remove('fade-in');void el.offsetWidth;el
 function scrollToResult(){setTimeout(()=>resultChip.scrollIntoView({behavior:'smooth',block:'start'}),120);}
 function showResult(title,body,isOrange){
   chipTitle.textContent=title;
-  chipBody.textContent=body;
+  chipBody.innerHTML=body;
   resultChip.className='result-chip'+(isOrange?' orange-accent':'')+' fade-in';
   resultChip.style.display='block';
   triggerFadeIn(resultChip);
@@ -726,7 +755,20 @@ function createMapBlock(step, index, total){
   img.src=maps[step.floor];
   img.alt=step.floor+' 지도';
   img.loading='lazy';
-  img.onclick=()=>openImagePopup(img.src);
+  img.onclick=()=>{
+    // 현재 단계의 경로 포인트 전달
+    const pts = step.pathFrom && step.pathTo && corridorGraph[step.floor]
+      ? (()=>{
+          const g=corridorGraph[step.floor];
+          const sId=nearestNode(g.nodes,parseFloat(step.pathFrom.left),parseFloat(step.pathFrom.top));
+          const eId=nearestNode(g.nodes,parseFloat(step.pathTo.left),parseFloat(step.pathTo.top));
+          if(sId===eId) return null;
+          const ids=dijkstra(g.nodes,g.edges,sId,eId);
+          return ids ? simplifyPath(ids.map(id=>({x:g.nodes[id].x,y:g.nodes[id].y}))) : null;
+        })()
+      : null;
+    openImagePopup(img.src, pts, step.floorLabel);
+  };
   wrapper.appendChild(img);
 
   (step.markers||[]).forEach(m=>{
@@ -1121,17 +1163,27 @@ function getRouteSteps(src,dst,srcFloor,dstFloor){
 
   /* 같은 건물, 다른 층 */
   if(sameBuilding){
-    const _elevSrc=elevators[srcFloor];
+    // 엘리베이터와 에스컬레이터 중 출발지에서 가까운 것을 pathTo로
+    function nearerTransport(floor, fromPos){
+      const elev=elevators[floor], esc=escalators[floor];
+      if(!elev&&!esc) return fromPos;
+      if(!elev) return esc;
+      if(!esc)  return elev;
+      const de=Math.hypot(parseFloat(elev.left)-parseFloat(fromPos.left), parseFloat(elev.top)-parseFloat(fromPos.top));
+      const ds=Math.hypot(parseFloat(esc.left) -parseFloat(fromPos.left), parseFloat(esc.top) -parseFloat(fromPos.top));
+      return de<=ds ? elev : esc;
+    }
+    const _tSrc=nearerTransport(srcFloor, src);
     steps.push({floor:srcFloor,floorLabel:srcFloor,icon:'🟢',
       action:{type:'elev', label:'엘리베이터·에스컬레이터 이용', dest:dstFloor, sub:'갈색 마커 위치로 이동 후 탑승'},
       markers:[{type:'start',pos:src},...getTransportMarkers(srcFloor)],
-      pathFrom:src, pathTo:_elevSrc||src,
+      pathFrom:src, pathTo:_tSrc||src,
       nextDesc:'엘리베이터·에스컬레이터 탑승 → '+dstFloor});
-    const _elevDst=elevators[dstFloor];
+    const _tDst=nearerTransport(dstFloor, dst);
     steps.push({floor:dstFloor,floorLabel:dstFloor,icon:'🟠',
       action:{type:'end', label:'목적지 도착', dest:'주황색 핀 위치', sub:'주황색 마커가 목적지예요'},
       markers:[{type:'end',pos:dst}],
-      pathFrom:_elevDst||dst, pathTo:dst});
+      pathFrom:_tDst||dst, pathTo:dst});
     return steps;
   }
 
@@ -1200,18 +1252,6 @@ function renderSteps(steps){
   const total=steps.length;
 
   if(total>1){
-    // 경로 요약 바
-    const summary=document.createElement('div');
-    summary.className='route-summary fade-in';
-    let summaryHTML='';
-    steps.forEach((step,i)=>{
-      const badge=getTransportBadge(step);
-      summaryHTML+=`<div class="route-summary-item">${step.icon} <span class="rs-floor">${step.floorLabel}</span></div>`;
-      if(badge) summaryHTML+=`<span class="route-summary-arrow">→</span><span class="rs-transport ${badge.cls}">${badge.icon}</span><span class="route-summary-arrow">→</span>`;
-    });
-    summary.innerHTML=summaryHTML;
-    mapsContainer.appendChild(summary);
-
     // 진행 단계 바
     const bar=document.createElement('div');
     bar.className='progress-bar fade-in';
@@ -1270,7 +1310,7 @@ function navigateRoute(){
   let body='';
   if(!src) body=`${dstFloor}에 위치해 있어요.`;
   else if(sameFloor) body='같은 층이에요! 바로 이동하시면 됩니다 🙂';
-  else if(sameBuilding) body=`같은 건물 · 다른 층\n엘리베이터를 이용해 ${dstFloor}으로 이동해주세요 🚪`;
+  else if(sameBuilding) body=`같은 건물 · 다른 층\n<strong>🛗 엘리베이터·에스컬레이터를 이용해 ${dstFloor}으로 이동하세요!</strong>`;
   else {
     const bl=getBridgeFloor(srcFloor,dstFloor);
     body=`본관 ↔ 신관 ${bl} 연결통로를 이용하는 경로예요 🚶\n아래 단계를 순서대로 따라가세요.`;
@@ -1285,13 +1325,169 @@ function navigateRoute(){
 }
 
 /* ── 팝업 ── */
-function openImagePopup(imgSrc){
-  document.getElementById('popupImg').src=imgSrc;
-  document.getElementById('imagePopup').style.display='flex';
+/* 팝업 줌/패닝 상태 */
+let _popupScale=1, _popupTx=0, _popupTy=0;
+let _popupPts=null; // 현재 경로 포인트
+
+function applyPopupTransform(){
+  const wrap=document.getElementById('popupMapWrap');
+  if(wrap) wrap.style.transform=`translate(${_popupTx}px,${_popupTy}px) scale(${_popupScale})`;
 }
-function closeImagePopup(){document.getElementById('imagePopup').style.display='none';}
+
+function openImagePopup(imgSrc, pts, floorLabel){
+  const img=document.getElementById('popupImg');
+  img.src=imgSrc;
+  _popupPts=pts||null;
+  _popupScale=1; _popupTx=0; _popupTy=0;
+  applyPopupTransform();
+
+  // 층 라벨
+  const lbl=document.getElementById('popupFloorLabel');
+  if(lbl) lbl.textContent=floorLabel||'';
+
+  document.getElementById('imagePopup').style.display='flex';
+
+  function drawPopupPath(){
+    drawPopupOverlay(_popupPts);
+  }
+  if(img.complete&&img.naturalWidth>0) drawPopupPath();
+  else img.addEventListener('load', drawPopupPath, {once:true});
+}
+
+function drawPopupOverlay(pts){
+  const pathSvg=document.getElementById('popupPathSvg');
+  const dimSvg =document.getElementById('popupDimSvg');
+  if(!pathSvg||!dimSvg) return;
+  pathSvg.innerHTML=''; dimSvg.innerHTML='';
+  if(!pts||pts.length<2) return;
+
+  const ps=pts.map(p=>`${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ');
+
+  // ─ 스포트라이트: 전체 어둡게 + 경로 주변만 밝게 (SVG clip-path) ─
+  const imgEl=document.getElementById('popupImg');
+  const iw=imgEl.offsetWidth||imgEl.naturalWidth||300;
+  const ih=imgEl.offsetHeight||imgEl.naturalHeight||200;
+
+  // dim SVG는 픽셀 기반 (viewBox 없음)
+  dimSvg.setAttribute('viewBox',`0 0 ${iw} ${ih}`);
+  dimSvg.setAttribute('preserveAspectRatio','none');
+
+  // 경로 픽셀 좌표 변환
+  const pxPts=pts.map(p=>({
+    x: p.x/100*iw,
+    y: p.y/100*ih
+  }));
+  const pxPs=pxPts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+
+  // clip: 경로 주변 버퍼(폭 약 3.5%) 제외하고 어둡게
+  const bufPx = iw * 0.038;
+
+  const clipId='popupClip'+Date.now();
+  dimSvg.innerHTML=`
+    <defs>
+      <filter id="blur1"><feGaussianBlur stdDeviation="${bufPx*0.6}"/></filter>
+      <mask id="${clipId}">
+        <rect width="${iw}" height="${ih}" fill="white" opacity="0.08"/>
+        <polyline points="${pxPs}"
+          fill="none" stroke="white" stroke-width="${bufPx*2}"
+          stroke-linecap="round" stroke-linejoin="round"
+          filter="url(#blur1)"/>
+      </mask>
+    </defs>
+    <rect width="${iw}" height="${ih}" fill="rgba(0,0,0,0.55)" mask="url(#${clipId})"/>
+  `;
+
+  // ─ 경로선: 채움 + 중앙선 + 흰 점선 ─
+  // fill
+  const fill=document.createElementNS('http://www.w3.org/2000/svg','polyline');
+  fill.setAttribute('points',ps);
+  fill.setAttribute('fill','none');
+  fill.setAttribute('stroke','rgba(255,140,66,0.40)');
+  fill.setAttribute('stroke-width','5');
+  fill.setAttribute('stroke-linecap','square');
+  fill.setAttribute('stroke-linejoin','miter');
+  pathSvg.appendChild(fill);
+
+  // line
+  const line=document.createElementNS('http://www.w3.org/2000/svg','polyline');
+  line.setAttribute('points',ps);
+  line.setAttribute('fill','none');
+  line.setAttribute('stroke','#ff8c42');
+  line.setAttribute('stroke-width','2.4');
+  line.setAttribute('stroke-linecap','square');
+  line.setAttribute('stroke-linejoin','miter');
+
+  // 드로우 애니메이션
+  let len=0;
+  for(let i=1;i<pts.length;i++)
+    len+=Math.sqrt((pts[i].x-pts[i-1].x)**2+(pts[i].y-pts[i-1].y)**2);
+  line.style.strokeDasharray=len;
+  line.style.strokeDashoffset=len;
+  line.style.transition='stroke-dashoffset 1.4s ease 0.1s';
+  pathSvg.appendChild(line);
+
+  // 흰 점선 애니메이션
+  const dash=document.createElementNS('http://www.w3.org/2000/svg','polyline');
+  dash.setAttribute('points',ps);
+  dash.setAttribute('class','path-dash');
+  pathSvg.appendChild(dash);
+
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    line.style.strokeDashoffset='0';
+  }));
+}
+
+function closeImagePopup(){
+  document.getElementById('imagePopup').style.display='none';
+  document.getElementById('popupPathSvg').innerHTML='';
+  document.getElementById('popupDimSvg').innerHTML='';
+  _popupPts=null; _popupScale=1; _popupTx=0; _popupTy=0;
+}
+
+// 줌 버튼
+document.getElementById('popupZoomIn').addEventListener('click',e=>{
+  e.stopPropagation();
+  _popupScale=Math.min(4,_popupScale*1.35); applyPopupTransform();
+});
+document.getElementById('popupZoomOut').addEventListener('click',e=>{
+  e.stopPropagation();
+  _popupScale=Math.max(1,_popupScale/1.35);
+  if(_popupScale<=1){_popupTx=0;_popupTy=0;}
+  applyPopupTransform();
+});
+
+// 핀치줌 + 드래그 (모바일)
+(function(){
+  const wrap=document.getElementById('popupMapWrap');
+  let lastDist=0, startScale=1, startTx=0, startTy=0, startX=0, startY=0, isPan=false;
+  wrap.addEventListener('touchstart',e=>{
+    if(e.touches.length===2){
+      lastDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+      startScale=_popupScale; isPan=false;
+    } else if(e.touches.length===1){
+      startX=e.touches[0].clientX-_popupTx;
+      startY=e.touches[0].clientY-_popupTy;
+      isPan=true;
+    }
+  },{passive:true});
+  wrap.addEventListener('touchmove',e=>{
+    if(e.touches.length===2){
+      const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+      _popupScale=Math.max(1,Math.min(4,startScale*d/lastDist));
+      applyPopupTransform(); e.preventDefault();
+    } else if(e.touches.length===1&&isPan&&_popupScale>1){
+      _popupTx=e.touches[0].clientX-startX;
+      _popupTy=e.touches[0].clientY-startY;
+      applyPopupTransform(); e.preventDefault();
+    }
+  },{passive:false});
+  wrap.addEventListener('touchend',()=>{
+    if(_popupScale<=1.05){_popupScale=1;_popupTx=0;_popupTy=0;applyPopupTransform();}
+  },{passive:true});
+})();
+
 document.getElementById('imagePopup').addEventListener('click',e=>{
-  if(!document.getElementById('popupInner').contains(e.target))closeImagePopup();
+  if(e.target===document.getElementById('imagePopup')) closeImagePopup();
 });
 
 /* ── 관리자 (Alt+M) ── */
