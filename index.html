@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v46</title>
+<title>강릉아산병원 안내지도 v47</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
@@ -784,36 +784,17 @@ function createMapBlock(step, index, total){
 
   block.appendChild(wrapper);
 
-  // dest callout + 다음/이전 버튼 (다단계일 때만)
+  // 다음/이전 버튼 (다단계일 때만, dest-callout 제거)
   if(total>1){
-    // 다음 목적지 callout
-    if(index<total-1 && step.nextDesc){
-      const badge=getTransportBadge(step);
-      const cls=badge?badge.cls:'walk';
-      const icon=badge?badge.icon:'🚶';
-      // nextDesc에서 목적지 층 추출
-      const destMatch=step.nextDesc.match(/→\s*(.+)$/);
-      const destText=destMatch?destMatch[1]:step.nextDesc;
-      const dc=document.createElement('div');
-      dc.className='dest-callout';
-      dc.innerHTML=
-        `<div class="dest-callout-icon ${cls}">${icon}</div>`+
-        `<div class="dest-callout-body">`+
-          `<div class="dest-callout-small">다음 목적지</div>`+
-          `<div class="dest-callout-floor ${cls}">${destText}</div>`+
-        `</div>`;
-      block.appendChild(dc);
-    }
     if(index<total-1){
-      const nb=document.createElement('button');
-      nb.className='next-btn';
-      // 이동수단에 맞는 액션 텍스트
       const badge=getTransportBadge(step);
       const destMatch=(step.nextDesc||'').match(/→\s*(.+)$/);
       const destTxt=destMatch?destMatch[1]:'다음 단계';
       let btnIcon='🚶', btnTxt=destTxt+'으로 이동';
       if(badge&&badge.cls==='elev') { btnIcon='🛗'; btnTxt='탑승 후 '+destTxt+'으로 이동'; }
       else if(badge&&badge.cls==='conn') { btnIcon='🔀'; btnTxt='연결통로 통해 '+destTxt+'으로 이동'; }
+      const nb=document.createElement('button');
+      nb.className='next-btn';
       nb.innerHTML=`${btnIcon} ${btnTxt} <span style="font-size:18px;margin-left:4px">→</span>`;
       nb.onclick=()=>goToStep(index+1, total);
       block.appendChild(nb);
