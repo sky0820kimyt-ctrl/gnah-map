@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v41</title>
+<title>강릉아산병원 안내지도 v42</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
@@ -1969,7 +1969,30 @@ function handleAdminClick(e){
   });
 
   // 리사이즈 대응
-  window.addEventListener('resize', () => renderAll());
+  // ── 화면 크기/회전 대응: 레이아웃 완료 후 재렌더 ──
+  let resizeTimer = null;
+  function deferredRender() {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    // 브라우저 레이아웃 재계산이 끝날 때까지 대기 후 렌더
+    resizeTimer = setTimeout(() => {
+      renderAll();
+      resizeTimer = null;
+    }, 150);
+  }
+
+  window.addEventListener('resize', deferredRender);
+
+  // 모바일 가로/세로 회전: orientationchange 후 레이아웃까지 시간이 더 걸림
+  window.addEventListener('orientationchange', () => {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      renderAll();
+      // 한 번 더 확인 (일부 기기는 500ms 후에야 완료)
+      setTimeout(renderAll, 400);
+      resizeTimer = null;
+    }, 100);
+  });
+
   mapImg.addEventListener('load', () => renderAll());
 
   // 초기 로드
