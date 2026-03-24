@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v50</title>
+<title>강릉아산병원 안내지도 v51</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
@@ -761,6 +761,14 @@ function showLoading(){loadingOverlay.style.display='flex';}
 function hideLoading(){loadingOverlay.style.display='none';}
 function triggerFadeIn(el){el.classList.remove('fade-in');void el.offsetWidth;el.classList.add('fade-in');}
 function scrollToResult(){setTimeout(()=>resultChip.scrollIntoView({behavior:'smooth',block:'start'}),120);}
+function scrollToMap(){
+  setTimeout(()=>{
+    const target=document.getElementById('stepNavBar')?.classList.contains('visible')
+      ? document.getElementById('stepNavBar')
+      : mapsContainer;
+    target.scrollIntoView({behavior:'smooth',block:'start'});
+  },200);
+}
 function showResult(title,body,isOrange){
   chipTitle.textContent=title;
   chipBody.innerHTML=body;
@@ -1462,6 +1470,7 @@ function searchPlace(){
   renderSteps([{floor:dst.floor,floorLabel:dst.floor,icon:'🟠',
     desc:'주황색 마커가 목적지예요.',markers:[{type:'end',pos:dst}]}]);
   triggerFadeIn(mapsContainer);
+  scrollToMap();
 }
 
 /* ── 경로 안내 ── */
@@ -1487,6 +1496,7 @@ function navigateRoute(){
   const steps=getRouteSteps(src,dst,srcFloor,dstFloor);
   renderSteps(steps);
   triggerFadeIn(mapsContainer);
+  scrollToMap();
 }
 
 /* ── 팝업 ── */
