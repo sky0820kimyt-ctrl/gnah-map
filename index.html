@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v48</title>
+<title>강릉아산병원 안내지도 v49</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
@@ -1684,6 +1684,162 @@ function handleAdminClick(e){
 
 /* 프리캐시 */
 (function(){Object.values(maps).forEach(url=>{new Image().src=url;});})();
+
+/* ════════════════════════════════════════
+   QR 파라미터 자동 입력
+   URL: gnahmap.netlify.app?from=신경과
+        gnahmap.netlify.app?from=신경과&to=ct실
+════════════════════════════════════════ */
+(function initFromQR(){
+  if(location.search.includes('edit')||location.search.includes('qr')) return;
+  const params=new URLSearchParams(location.search);
+  const from=params.get('from'), to=params.get('to');
+  if(!from&&!to) return;
+
+  function applyParams(){
+    if(from){
+      const key=resolveKey(from)||from;
+      startInput.value=key;
+      toggleClear('startInput','clearStart');
+      showQRBanner(key, to?(resolveKey(to)||to):null);
+    }
+    if(to){
+      const key=resolveKey(to)||to;
+      endInput.value=key;
+      toggleClear('endInput','clearEnd');
+      updateBtnState();
+    }
+    if(from&&to) setTimeout(()=>navigateRoute(),500);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',applyParams);
+  else setTimeout(applyParams,150);
+})();
+
+function showQRBanner(fromLabel,toLabel){
+  const e=document.getElementById('qrBanner'); if(e) e.remove();
+  const b=document.createElement('div');
+  b.id='qrBanner';
+  b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:4000;background:var(--mint);color:#fff;padding:14px 18px;display:flex;align-items:center;gap:10px;box-shadow:0 3px 12px rgba(0,0,0,0.2);font-family:"Noto Sans KR",sans-serif;';
+  b.innerHTML=`<span style="font-size:22px">📍</span><div style="flex:1"><div style="font-size:13px;opacity:.85;font-weight:700;">QR코드로 현재 위치 확인</div><div style="font-size:17px;font-weight:900;">${fromLabel}${toLabel?' → '+toLabel:' 에서 출발'}</div></div><button onclick="document.getElementById('qrBanner').remove()" style="background:rgba(255,255,255,0.25);border:none;color:#fff;font-size:18px;width:36px;height:36px;border-radius:50%;cursor:pointer;">✕</button>`;
+  document.body.prepend(b);
+  setTimeout(()=>b&&b.remove(),4000);
+}
+
+/* ════════════════════════════════════════
+   QR 생성기 (?qr 파라미터로 접근)
+════════════════════════════════════════ */
+(function initQRGenerator(){
+  if(!location.search.includes('qr')) return;
+
+  const style=document.createElement('style');
+  style.textContent=`
+    #qrGenerator{position:fixed;inset:0;background:#f0f4f2;z-index:10000;display:flex;flex-direction:column;font-family:'Noto Sans KR',sans-serif;overflow-y:auto;}
+    #qrGenBar{background:#009688;color:#fff;padding:14px 18px;display:flex;align-items:center;gap:10px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.2);}
+    #qrGenBar h2{font-size:18px;font-weight:900;}
+    #qrGenBody{padding:20px;max-width:700px;margin:0 auto;width:100%;}
+    .qgc{background:#fff;border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,150,136,0.1);border:2px solid #dde8e5;}
+    .qgl{font-size:14px;font-weight:800;color:#3d5247;margin-bottom:8px;}
+    .qgi{width:100%;padding:14px;border:2px solid #b8d0c8;border-radius:10px;font-size:16px;font-family:'Noto Sans KR',sans-serif;font-weight:700;color:#1a2e25;background:#fafcfb;outline:none;margin-bottom:10px;box-sizing:border-box;}
+    .qgi:focus{border-color:#009688;}
+    .qgb{padding:13px 20px;border:none;border-radius:10px;cursor:pointer;font-size:15px;font-weight:800;font-family:'Noto Sans KR',sans-serif;}
+    .qgb.g{background:#009688;color:#fff;} .qgb.gr{background:#e0e8e4;color:#3d5247;margin-left:8px;}
+    #qrDisplay{margin-top:16px;text-align:center;display:none;}
+    .qr-url{font-size:12px;color:#009688;word-break:break-all;margin-bottom:12px;font-weight:700;background:#e0f2f1;padding:8px 12px;border-radius:8px;}
+    #qrCanvas{border:3px solid #009688;border-radius:12px;padding:8px;background:#fff;}
+    .qg-pos-btn{padding:8px 14px;border:2px solid #b8d0c8;border-radius:20px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;color:#1a2e25;margin:3px;transition:all .15s;}
+    .qg-pos-btn:hover{border-color:#009688;background:#e0f2f1;color:#009688;}
+  `;
+  document.head.appendChild(style);
+
+  const div=document.createElement('div');
+  div.id='qrGenerator';
+  div.innerHTML=`
+    <div id="qrGenBar">
+      <h2>📱 QR코드 생성기</h2>
+      <button onclick="location.href=location.pathname" style="margin-left:auto;background:rgba(255,255,255,0.2);border:none;color:#fff;padding:8px 16px;border-radius:20px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">✕ 닫기</button>
+    </div>
+    <div id="qrGenBody">
+      <div class="qgc">
+        <div class="qgl">📍 QR을 붙일 장소 (출발지)</div>
+        <input id="qgFrom" class="qgi" placeholder="예: 신경과, 호흡기내과" list="qgFromList">
+        <datalist id="qgFromList"></datalist>
+        <div class="qgl" style="margin-top:4px;">🏁 도착지 (선택 — 비워두면 출발지만 자동입력)</div>
+        <input id="qgTo" class="qgi" placeholder="비워두면 도착지 선택 화면으로 이동">
+        <div>
+          <button class="qgb g" onclick="generateQR()">📱 QR 생성</button>
+          <button class="qgb gr" onclick="document.getElementById('qgFrom').value='';document.getElementById('qgTo').value='';document.getElementById('qrDisplay').style.display='none'">초기화</button>
+        </div>
+        <div id="qrDisplay">
+          <div class="qr-url" id="qrUrl"></div>
+          <canvas id="qrCanvas" width="220" height="220"></canvas>
+          <div style="margin-top:10px;font-size:13px;color:#3d5247;font-weight:700;">💡 이미지를 길게 눌러 저장하세요</div>
+          <button class="qgb g" style="margin-top:10px;width:100%" onclick="downloadQR()">⬇ QR 이미지 저장</button>
+        </div>
+      </div>
+      <div class="qgc">
+        <div class="qgl">⚡ 장소 빠른 선택</div>
+        <div id="qgPosList" style="display:flex;flex-wrap:wrap;"></div>
+      </div>
+      <div class="qgc" style="background:#e0f2f1;">
+        <div class="qgl">📋 사용 방법</div>
+        <div style="font-size:14px;line-height:2;color:#1a2e25;font-weight:600;">
+          1️⃣ 출발지에 장소 이름 입력 (예: 신경과)<br>
+          2️⃣ QR 생성 버튼 클릭<br>
+          3️⃣ QR 이미지 저장 후 인쇄<br>
+          4️⃣ 해당 장소에 QR코드 부착<br><br>
+          📱 환자가 QR 스캔 시 → 출발지 자동 입력!
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(div);
+
+  // 장소 목록 채우기
+  const posList=document.getElementById('qgPosList');
+  const fromList=document.getElementById('qgFromList');
+  Object.keys(positions).forEach(name=>{
+    const opt=document.createElement('option'); opt.value=name; fromList.appendChild(opt);
+    const btn=document.createElement('button');
+    btn.className='qg-pos-btn'; btn.textContent=name;
+    btn.onclick=()=>{ document.getElementById('qgFrom').value=name; generateQR(); };
+    posList.appendChild(btn);
+  });
+
+  window.generateQR=function(){
+    const from=document.getElementById('qgFrom').value.trim();
+    const to=document.getElementById('qgTo').value.trim();
+    if(!from){alert('출발지를 입력해주세요.');return;}
+    const base=location.origin+location.pathname;
+    let url=base+'?from='+encodeURIComponent(from);
+    if(to) url+='&to='+encodeURIComponent(to);
+    document.getElementById('qrUrl').textContent=url;
+    const canvas=document.getElementById('qrCanvas');
+    const img=new Image();
+    img.crossOrigin='anonymous';
+    img.onload=()=>{
+      const ctx=canvas.getContext('2d');
+      ctx.fillStyle='#fff'; ctx.fillRect(0,0,220,220);
+      ctx.drawImage(img,10,10,200,200);
+    };
+    img.onerror=()=>{
+      const ctx=canvas.getContext('2d');
+      ctx.fillStyle='#e0f2f1'; ctx.fillRect(0,0,220,220);
+      ctx.fillStyle='#009688'; ctx.font='bold 13px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('네트워크 연결 후',110,100); ctx.fillText('다시 시도해주세요',110,120);
+    };
+    img.src=`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}&color=009688&bgcolor=ffffff`;
+    document.getElementById('qrDisplay').style.display='block';
+  };
+
+  window.downloadQR=function(){
+    const canvas=document.getElementById('qrCanvas');
+    const from=document.getElementById('qgFrom').value.trim();
+    const a=document.createElement('a');
+    a.download=`QR_${from||'위치'}.png`;
+    a.href=canvas.toDataURL('image/png');
+    a.click();
+  };
+})();
 
 /* ════════════════════════════════════════
    복도 에디터 (?edit 파라미터로 접근)
