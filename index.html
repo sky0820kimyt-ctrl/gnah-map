@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v52</title>
+<title>강릉아산병원 안내지도 v53</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
@@ -594,10 +594,10 @@
 <div class="footer-note">
   <p>😊 병원 안내 정보가 도움이 되셨나요?</p>
   <p>수정이 필요하거나 보완할 부분이 있다면<br>
-  언제든지 <a href="mailto:t161930@gnah.co.kr">t161930@gnah.co.kr</a> 로 알려주세요.</p>
+  언제든지 <a href="/cdn-cgi/l/email-protection#64105552555d575424030a050c4a070b4a0f16"><span class="__cf_email__" data-cfemail="1a6e2b2c2b23292a5a7d747b72347975347168">[email&#160;protected]</span></a> 로 알려주세요.</p>
 </div>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 /* ── 데이터 ── */
 const maps = {
   '본관 지하1층':'https://i0.wp.com/i.ibb.co/99nBTF5r/1.png',
@@ -705,7 +705,7 @@ const aliases = {
   'xray':'일반촬영실','x-ray':'일반촬영실',
   '초음파':'초음파검사실',
   '심전도':'심혈관센터 검사실','ekg':'심혈관센터 검사실','홀터':'심혈관센터 검사실',
-  '심장내과':'심혈관센터 외래(심장내과)',
+  '심장내과':'심혈관센터 외래',
   'pet':'핵의학과(pet-ct/골밀도)','pet-ct':'핵의학과(pet-ct/골밀도)','골밀도':'핵의학과(pet-ct/골밀도)'
 };
 
@@ -1701,11 +1701,33 @@ function handleAdminClick(e){
    URL: gnahmap.netlify.app?from=신경과
         gnahmap.netlify.app?from=신경과&to=ct실
 ════════════════════════════════════════ */
+/* QR 스캔 카운트 (CountAPI 무료 서비스 사용) */
+const NAMESPACE='gnahmap-gnah';
+async function countHit(key){
+  try{
+    const r=await fetch(`https://api.countapi.xyz/hit/${NAMESPACE}/${encodeURIComponent(key)}`);
+    const d=await r.json(); return d.value||0;
+  }catch(e){return 0;}
+}
+async function getCount(key){
+  try{
+    const r=await fetch(`https://api.countapi.xyz/get/${NAMESPACE}/${encodeURIComponent(key)}`);
+    const d=await r.json(); return d.value||0;
+  }catch(e){return 0;}
+}
+
 (function initFromQR(){
-  if(location.search.includes('edit')||location.search.includes('qr')) return;
+  if(location.search.includes('edit')||location.search.includes('qr')||location.search.includes('stats')) return;
   const params=new URLSearchParams(location.search);
   const from=params.get('from'), to=params.get('to');
   if(!from&&!to) return;
+
+  // QR 스캔 카운트 기록
+  if(from){
+    countHit('total'); // 전체 스캔 수
+    countHit('from-'+from); // 출발지별 스캔 수
+    if(to) countHit('route-'+from+'-to-'+to); // 경로별 스캔 수
+  }
 
   function applyParams(){
     if(from){
@@ -1713,6 +1735,7 @@ function handleAdminClick(e){
       startInput.value=key;
       toggleClear('startInput','clearStart');
       showQRBanner(key, to?(resolveKey(to)||to):null);
+      recordQRScan(from);
     }
     if(to){
       const key=resolveKey(to)||to;
@@ -1726,6 +1749,22 @@ function handleAdminClick(e){
   else setTimeout(applyParams,150);
 })();
 
+/* ── QR 조회수 (localStorage 기반) ── */
+const QR_STATS_KEY='gnah_qr_stats_v1';
+function recordQRScan(place){
+  try{
+    const s=JSON.parse(localStorage.getItem(QR_STATS_KEY)||'{}');
+    const today=new Date().toISOString().slice(0,10);
+    if(!s[place]) s[place]={total:0,dates:{}};
+    s[place].total=(s[place].total||0)+1;
+    s[place].dates[today]=(s[place].dates[today]||0)+1;
+    s.__lastScan=new Date().toISOString();
+    localStorage.setItem(QR_STATS_KEY,JSON.stringify(s));
+  }catch(e){}
+}
+function getQRStats(){
+  try{return JSON.parse(localStorage.getItem(QR_STATS_KEY)||'{}');}catch(e){return {};}
+}
 function showQRBanner(fromLabel,toLabel){
   const e=document.getElementById('qrBanner'); if(e) e.remove();
   const b=document.createElement('div');
@@ -1739,6 +1778,106 @@ function showQRBanner(fromLabel,toLabel){
 /* ════════════════════════════════════════
    QR 생성기 (?qr 파라미터로 접근)
 ════════════════════════════════════════ */
+/* ════════════════════════════════════════
+   통계 대시보드 (?stats 파라미터)
+════════════════════════════════════════ */
+(function initStats(){
+  if(!location.search.includes('stats')) return;
+
+  const style=document.createElement('style');
+  style.textContent=`
+    #statsPage{position:fixed;inset:0;background:#f0f4f2;z-index:10000;display:flex;flex-direction:column;font-family:'Noto Sans KR',sans-serif;overflow-y:auto;}
+    #statsBar{background:#009688;color:#fff;padding:14px 18px;display:flex;align-items:center;gap:10px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.2);}
+    #statsBar h2{font-size:18px;font-weight:900;}
+    #statsBody{padding:20px;max-width:700px;margin:0 auto;width:100%;}
+    .stat-card{background:#fff;border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,150,136,0.1);border:2px solid #dde8e5;}
+    .stat-card h3{font-size:15px;font-weight:800;color:#3d5247;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #eef4f2;}
+    .stat-total{text-align:center;padding:20px 0;}
+    .stat-num{font-size:56px;font-weight:900;color:#009688;line-height:1;}
+    .stat-label{font-size:14px;color:#3d5247;font-weight:700;margin-top:6px;}
+    .stat-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #eef4f2;}
+    .stat-row:last-child{border-bottom:none;}
+    .stat-name{flex:1;font-size:15px;font-weight:700;color:#1a2e25;}
+    .stat-count{font-size:18px;font-weight:900;color:#009688;min-width:40px;text-align:right;}
+    .stat-bar-wrap{width:100%;background:#eef4f2;border-radius:20px;height:8px;margin-top:4px;}
+    .stat-bar{background:var(--mint,#009688);border-radius:20px;height:8px;transition:width .6s ease;}
+    .stat-loading{text-align:center;padding:30px;color:#3d5247;font-weight:700;font-size:15px;}
+    .stat-refresh{background:#009688;color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:14px;font-weight:800;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:10px;}
+    .stat-empty{text-align:center;color:#aaa;font-size:14px;padding:20px;}
+  `;
+  document.head.appendChild(style);
+
+  const div=document.createElement('div');
+  div.id='statsPage';
+  div.innerHTML=`
+    <div id="statsBar">
+      <h2>📊 QR 스캔 통계</h2>
+      <button onclick="loadStats()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:8px 14px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">🔄 새로고침</button>
+      <button onclick="location.href=location.pathname" style="margin-left:8px;background:rgba(255,255,255,0.2);border:none;color:#fff;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">✕ 닫기</button>
+    </div>
+    <div id="statsBody">
+      <div class="stat-card">
+        <div class="stat-total">
+          <div class="stat-num" id="statTotal">-</div>
+          <div class="stat-label">총 QR 스캔 횟수</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <h3>📍 출발지별 스캔 수</h3>
+        <div id="statFromList"><div class="stat-loading">불러오는 중...</div></div>
+      </div>
+      <div class="stat-card" style="background:#e0f2f1;">
+        <h3>📋 안내</h3>
+        <div style="font-size:14px;line-height:1.9;color:#1a2e25;font-weight:600;">
+          • QR코드가 스캔될 때마다 자동 기록돼요<br>
+          • 데이터는 CountAPI 서버에 저장돼요 (무료)<br>
+          • 통계는 실시간으로 누적돼요<br>
+          • QR 생성: <a href="?qr" style="color:#009688;font-weight:800;">gnahmap.netlify.app?qr</a>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(div);
+
+  async function loadStats(){
+    // 전체 스캔 수
+    const total=await getCount('total');
+    document.getElementById('statTotal').textContent=total.toLocaleString();
+
+    // 출발지별: positions의 모든 장소 조회
+    const fromListEl=document.getElementById('statFromList');
+    fromListEl.innerHTML='<div class="stat-loading">출발지별 데이터 조회 중...</div>';
+
+    const places=Object.keys(positions);
+    const counts=await Promise.all(places.map(p=>getCount('from-'+p)));
+    const data=places.map((p,i)=>({name:p,count:counts[i]}))
+      .filter(d=>d.count>0)
+      .sort((a,b)=>b.count-a.count);
+
+    if(data.length===0){
+      fromListEl.innerHTML='<div class="stat-empty">아직 스캔 기록이 없어요</div>';
+      return;
+    }
+    const max=data[0].count;
+    fromListEl.innerHTML=data.slice(0,20).map(d=>`
+      <div class="stat-row">
+        <div style="flex:1">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span class="stat-name">${d.name}</span>
+            <span class="stat-count">${d.count}</span>
+          </div>
+          <div class="stat-bar-wrap">
+            <div class="stat-bar" style="width:${Math.round(d.count/max*100)}%"></div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  window.loadStats=loadStats;
+  loadStats();
+})();
+
 (function initQRGenerator(){
   if(!location.search.includes('qr')) return;
 
@@ -1791,6 +1930,18 @@ function showQRBanner(fromLabel,toLabel){
         <div class="qgl">⚡ 장소 빠른 선택</div>
         <div id="qgPosList" style="display:flex;flex-wrap:wrap;"></div>
       </div>
+      <div class="qgc">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div class="qgl" style="margin:0;">📊 QR 조회수</div>
+          <div style="display:flex;gap:6px;">
+            <button onclick="loadStats()" class="qgb gr" style="font-size:12px;padding:6px 12px;">🔄 새로고침</button>
+            <button onclick="if(confirm('조회수를 초기화할까요?')){localStorage.removeItem(QR_STATS_KEY);loadStats();}" class="qgb gr" style="font-size:12px;padding:6px 12px;color:#c62828;">🗑 초기화</button>
+          </div>
+        </div>
+        <div id="qgSummary" style="background:#f0f9f7;border-radius:10px;padding:12px;margin-bottom:10px;font-size:13px;font-weight:700;"></div>
+        <div id="qgTable"></div>
+        <p style="font-size:11px;color:#6b7c74;margin-top:8px;">💡 이 기기에서 스캔된 QR 횟수가 기록돼요.</p>
+      </div>
       <div class="qgc" style="background:#e0f2f1;">
         <div class="qgl">📋 사용 방법</div>
         <div style="font-size:14px;line-height:2;color:#1a2e25;font-weight:600;">
@@ -1798,7 +1949,8 @@ function showQRBanner(fromLabel,toLabel){
           2️⃣ QR 생성 버튼 클릭<br>
           3️⃣ QR 이미지 저장 후 인쇄<br>
           4️⃣ 해당 장소에 QR코드 부착<br><br>
-          📱 환자가 QR 스캔 시 → 출발지 자동 입력!
+          📱 환자가 QR 스캔 시 → 출발지 자동 입력!<br>
+          📊 조회수는 이 페이지에서 확인 가능
         </div>
       </div>
     </div>
@@ -1850,6 +2002,49 @@ function showQRBanner(fromLabel,toLabel){
     a.href=canvas.toDataURL('image/png');
     a.click();
   };
+
+  window.loadStats=function(){
+    const s=getQRStats();
+    const entries=Object.entries(s).filter(([k])=>k!=='__lastScan').sort(([,a],[,b])=>(b.total||0)-(a.total||0));
+    const total=entries.reduce((acc,[,v])=>acc+(v.total||0),0);
+    const today=new Date().toISOString().slice(0,10);
+    const lastScan=s.__lastScan?new Date(s.__lastScan).toLocaleString('ko-KR'):'없음';
+
+    document.getElementById('qgSummary').innerHTML=
+      `<div style="display:flex;gap:20px;flex-wrap:wrap;">
+        <span>📱 총 스캔: <b style="color:#009688;font-size:17px;">${total}회</b></span>
+        <span>📍 등록 장소: <b style="color:#009688;font-size:17px;">${entries.length}곳</b></span>
+        <span style="color:#888;font-size:11px;align-self:center;">마지막: ${lastScan}</span>
+      </div>`;
+
+    if(!entries.length){
+      document.getElementById('qgTable').innerHTML=
+        '<p style="color:#888;text-align:center;padding:16px;">아직 스캔 기록이 없어요.<br>QR 스캔 시 자동으로 기록됩니다.</p>';
+      return;
+    }
+
+    const rows=entries.map(([place,v],i)=>`
+      <tr style="border-bottom:1px solid #eef4f2;${i===0?'background:#fffbe6;':''}">
+        <td style="padding:9px 10px;font-weight:700;">${['🥇','🥈','🥉'][i]||'  '} ${place}</td>
+        <td style="padding:9px;text-align:center;font-weight:900;color:#009688;font-size:16px;">${v.total||0}</td>
+        <td style="padding:9px;text-align:center;font-weight:700;color:#e8620a;">${v.dates&&v.dates[today]?v.dates[today]:'-'}</td>
+        <td style="padding:9px;font-size:11px;color:#888;">${v.dates?Object.keys(v.dates).sort().pop()||'-':'-'}</td>
+      </tr>`).join('');
+
+    document.getElementById('qgTable').innerHTML=`
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="background:#e0f2f1;">
+          <th style="padding:8px 10px;text-align:left;font-weight:800;">장소</th>
+          <th style="padding:8px;text-align:center;font-weight:800;">총</th>
+          <th style="padding:8px;text-align:center;font-weight:800;">오늘</th>
+          <th style="padding:8px;text-align:left;font-weight:800;">최근 날짜</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  };
+
+  // 페이지 열리면 자동 로드
+  loadStats();
 })();
 
 /* ════════════════════════════════════════
@@ -2557,16 +2752,14 @@ function showQRBanner(fromLabel,toLabel){
     if (resizeTimer) clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
       renderAll();
-      // 한 번 더 확인 (일부 기기는 500ms 후에야 완료)
+      // 한 번 더 확인 (일부 기기      // 한 번 더 확인 (일부 기기는 500ms 후에야 완료)
       setTimeout(renderAll, 400);
       resizeTimer = null;
     }, 100);
   });
 
   mapImg.addEventListener('load', () => renderAll());
-
-  // 초기 로드
-  loadFloor(currentFloor);
+});
 })();
 </script>
 </body>
