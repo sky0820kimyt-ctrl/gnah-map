@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v56</title>
+<title>강릉아산병원 안내지도 v60</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
@@ -197,6 +197,80 @@
   .slide-in-top    { animation:slideInFromTop    .38s cubic-bezier(.22,.61,.36,1) both; }
   .slide-in-bottom { animation:slideInFromBottom .38s cubic-bezier(.22,.61,.36,1) both; }
 
+  /* ── 아이소메트릭 전환 오버레이 ── */
+  #isoOverlay {
+    position:fixed; inset:0; z-index:4500;
+    pointer-events:none; display:none;
+    perspective:900px;
+  }
+  #isoOverlay.visible { display:block; }
+
+  .iso-stage {
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap:0;
+  }
+  /* 위층 슬라브 */
+  .iso-top-floor {
+    width:220px; height:44px;
+    background:linear-gradient(135deg,#e0f2f1 60%,#b2dfdb);
+    border:2px solid #009688; border-radius:6px 6px 0 0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:15px; font-weight:900; color:#004d40;
+    transform:rotateX(40deg) translateY(8px);
+    transform-origin:bottom center;
+    box-shadow:0 -4px 16px rgba(0,150,136,.25);
+    opacity:0;
+  }
+  /* 수직 기둥 (엘리베이터 샤프트) */
+  .iso-shaft {
+    width:32px;
+    background:linear-gradient(180deg,#009688,#00796b);
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px;
+    box-shadow:2px 0 8px rgba(0,0,0,.18);
+    opacity:0;
+    overflow:hidden;
+    height:0;
+  }
+  /* 현재층 슬라브 */
+  .iso-bot-floor {
+    width:220px; height:44px;
+    background:linear-gradient(135deg,#fff3e0 60%,#ffe0b2);
+    border:2px solid #e8620a; border-radius:0 0 6px 6px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:15px; font-weight:900; color:#bf360c;
+    transform:rotateX(-40deg) translateY(-8px);
+    transform-origin:top center;
+    box-shadow:0 4px 16px rgba(232,98,10,.25);
+    opacity:0;
+  }
+  /* 엘리베이터 캐빈 */
+  .iso-cabin {
+    position:absolute;
+    width:28px; height:28px;
+    background:#fff; border:2px solid #009688; border-radius:6px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:16px;
+    box-shadow:0 2px 8px rgba(0,0,0,.2);
+    opacity:0;
+  }
+
+  /* 애니메이션 */
+  @keyframes isoFloorIn  { from{opacity:0;transform:rotateX(40deg) translateY(16px) scale(.9)} to{opacity:1;transform:rotateX(40deg) translateY(8px) scale(1)} }
+  @keyframes isoBotIn    { from{opacity:0;transform:rotateX(-40deg) translateY(-16px) scale(.9)} to{opacity:1;transform:rotateX(-40deg) translateY(-8px) scale(1)} }
+  @keyframes isoShaftIn  { from{opacity:0;height:0} to{opacity:1;height:60px} }
+  @keyframes isoCabinUp  { 0%{opacity:1;top:calc(50% + 20px)} 80%{opacity:1;top:calc(50% - 20px)} 100%{opacity:0;top:calc(50% - 28px)} }
+  @keyframes isoCabinDn  { 0%{opacity:1;top:calc(50% - 20px)} 80%{opacity:1;top:calc(50% + 20px)} 100%{opacity:0;top:calc(50% + 28px)} }
+  @keyframes isoFadeOut  { from{opacity:1} to{opacity:0} }
+
+  .iso-top-floor.anim { animation:isoFloorIn .4s .1s ease both; }
+  .iso-bot-floor.anim { animation:isoBotIn   .4s .1s ease both; }
+  .iso-shaft.anim     { animation:isoShaftIn .35s .4s ease both; }
+  .iso-cabin.up       { animation:isoCabinUp .55s .75s ease both; }
+  .iso-cabin.down     { animation:isoCabinDn .55s .75s ease both; }
+
   /* ── 층 인디케이터 (화면 우측 고정) ── */
   #floorIndicator {
     position:fixed; right:14px; top:50%; transform:translateY(-50%);
@@ -211,7 +285,11 @@
     width:36px; height:36px; border-radius:50%;
     display:flex; align-items:center; justify-content:center;
     font-size:11px; font-weight:900; color:var(--text-sub);
-    cursor:default; transition:all .25s; position:relative;
+    cursor:pointer; transition:all .25s; position:relative;
+  }
+  .fi-item:hover:not(.fi-active) {
+    background:#e0f2f1; color:var(--mint);
+    transform:scale(1.1);
   }
   .fi-item.fi-active {
     background:var(--mint); color:#fff;
@@ -622,6 +700,15 @@
 <div id="mapsContainer"></div>
 <!-- 층 인디케이터 -->
 <div id="floorIndicator"></div>
+<!-- 아이소메트릭 전환 오버레이 -->
+<div id="isoOverlay">
+  <div class="iso-stage">
+    <div class="iso-top-floor" id="isoTop"></div>
+    <div class="iso-shaft" id="isoShaft">🛗</div>
+    <div class="iso-bot-floor" id="isoBot"></div>
+    <div class="iso-cabin" id="isoCabin">🛗</div>
+  </div>
+</div>
 
 <div id="imagePopup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:5000;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
   <div id="popupInner" style="position:relative;max-width:96%;max-height:92vh;overflow:hidden;border-radius:14px;">
@@ -1060,78 +1147,125 @@ function floorNum(label){
   return m?parseInt(m[1]):0;
 }
 
-/* ── 층 인디케이터 렌더 ── */
+/* ── 층 레이블 축약 ── */
+function floorShort(f){
+  let lbl=f.replace(/본관\s*/,'').replace(/신관\s*/,'');
+  return lbl.replace('지하1층','B1').replace('1층','1F').replace('2층','2F').replace('3층','3F');
+}
+
+/* ── 층 인디케이터 렌더 (클릭 가능) ── */
 function renderFloorIndicator(steps, activeIdx){
   const fi=document.getElementById('floorIndicator');
   if(!fi) return;
-  // 층 목록 추출 (중복제거, 순서유지)
   const floors=steps.map(s=>s.floorLabel||s.floor);
   const activeFloor=floors[activeIdx];
-  // 고유 층 목록 (순서대로)
   const unique=[...new Set(floors)];
   if(unique.length<2){fi.classList.remove('visible');return;}
   fi.classList.add('visible');
 
+  // 클릭 시 그 층에 해당하는 첫 번째 단계 인덱스로 이동
   fi.innerHTML=unique.map((f,i)=>{
     const isActive=(f===activeFloor);
-    // 층 레이블 축약: '본관 3층'→'3F', '신관 지하1층'→'B1'
-    let lbl=f.replace(/본관\s*/,'').replace(/신관\s*/,'');
-    lbl=lbl.replace('지하1층','B1').replace('1층','1F').replace('2층','2F').replace('3층','3F');
-    return `${i>0?'<div class="fi-line"></div>':''}<div class="fi-item${isActive?' fi-active':''}" data-floor="${f}">${lbl}</div>`;
+    const stepIdx=floors.indexOf(f); // 해당 층의 첫 단계
+    return (i>0?'<div class="fi-line"></div>':'')+
+      `<div class="fi-item${isActive?' fi-active':''} fi-clickable"
+        data-floor="${f}" data-step="${stepIdx}"
+        title="${f}">${floorShort(f)}</div>`;
   }).join('');
+
+  // 클릭 이벤트
+  fi.querySelectorAll('.fi-clickable').forEach(el=>{
+    el.onclick=()=>{
+      const targetIdx=parseInt(el.dataset.step);
+      if(!isNaN(targetIdx) && targetIdx!==currentStepIndex)
+        goToStep(targetIdx, _navSteps.length);
+    };
+  });
 }
 
-/* ── 단계 이동 (Layer Sliding) ── */
+/* ── 아이소메트릭 전환 실행 ── */
+function playIsoTransition(fromFloor, toFloor, goingUp, cb){
+  const overlay=document.getElementById('isoOverlay');
+  const isoTop=document.getElementById('isoTop');
+  const isoBot=document.getElementById('isoBot');
+  const isoShaft=document.getElementById('isoShaft');
+  const isoCabin=document.getElementById('isoCabin');
+  if(!overlay) { cb(); return; }
+
+  // 위층=도착, 아래층=출발 (올라갈 때 기준)
+  const upFloor   = goingUp ? toFloor   : fromFloor;
+  const downFloor = goingUp ? fromFloor : toFloor;
+  isoTop.textContent  = floorShort(upFloor)  + ' ' + upFloor.replace(/본관|신관/,'').trim();
+  isoBot.textContent  = floorShort(downFloor)+ ' ' + downFloor.replace(/본관|신관/,'').trim();
+  isoShaft.textContent= goingUp ? '🛗' : '🪜';
+  isoCabin.textContent= goingUp ? '🛗' : '🪜';
+
+  // 리셋
+  [isoTop,isoBot,isoShaft,isoCabin].forEach(el=>{
+    el.classList.remove('anim','up','down');
+    void el.offsetWidth;
+  });
+
+  overlay.classList.add('visible');
+  isoTop.classList.add('anim');
+  isoBot.classList.add('anim');
+  isoShaft.classList.add('anim');
+  isoCabin.classList.add(goingUp?'up':'down');
+
+  // 총 1.4초 후 오버레이 닫고 콜백
+  setTimeout(()=>{
+    overlay.classList.remove('visible');
+    cb();
+  }, 1400);
+}
+
+/* ── 단계 이동 (Layer Sliding + Isometric) ── */
 function goToStep(idx, total){
   const prevIdx=currentStepIndex;
   const prevBlock=document.getElementById('step-block-'+prevIdx);
   const nextBlock=document.getElementById('step-block-'+idx);
   if(!nextBlock) return;
 
-  // 층 방향 판별
   const prevFloor=prevBlock ? (prevBlock.dataset.floor||'') : '';
   const nextFloor=nextBlock.dataset.floor||'';
+  const floorChanged = prevFloor && nextFloor && prevFloor!==nextFloor;
   const goingUp = floorNum(nextFloor) > floorNum(prevFloor);
   const slideClass = goingUp ? 'slide-in-top' : 'slide-in-bottom';
 
-  // 이전 블록 숨김
-  if(prevBlock && prevIdx!==idx){
-    prevBlock.classList.remove('active-step');
-  }
+  function applyTransition(){
+    if(prevBlock && prevIdx!==idx) prevBlock.classList.remove('active-step');
 
-  // 새 블록 표시 + 슬라이드 애니메이션
-  nextBlock.classList.remove('slide-in-top','slide-in-bottom');
-  void nextBlock.offsetWidth;
-  nextBlock.classList.add('active-step', slideClass);
-  // 애니메이션 후 클래스 제거
-  nextBlock.addEventListener('animationend', ()=>{
     nextBlock.classList.remove('slide-in-top','slide-in-bottom');
-  }, {once:true});
+    void nextBlock.offsetWidth;
+    nextBlock.classList.add('active-step', slideClass);
+    nextBlock.addEventListener('animationend',()=>{
+      nextBlock.classList.remove('slide-in-top','slide-in-bottom');
+    },{once:true});
 
-  currentStepIndex=idx;
+    currentStepIndex=idx;
 
-  // 층 이동 시 인디케이터 버튼 눌림 효과
-  if(prevFloor && nextFloor && prevFloor!==nextFloor){
-    const fi=document.getElementById('floorIndicator');
-    if(fi){
-      const activeItem=fi.querySelector('.fi-active');
-      if(activeItem){
-        activeItem.classList.add('fi-elevator-press');
-        setTimeout(()=>{
-          renderFloorIndicator(_navSteps, idx);
-        }, 300);
-      } else {
-        renderFloorIndicator(_navSteps, idx);
-      }
+    // 인디케이터 눌림 효과
+    if(floorChanged){
+      const fi=document.getElementById('floorIndicator');
+      const activeItem=fi&&fi.querySelector('.fi-active');
+      if(activeItem) activeItem.classList.add('fi-elevator-press');
+      setTimeout(()=>renderFloorIndicator(_navSteps,idx), 300);
+    } else {
+      renderFloorIndicator(_navSteps,idx);
     }
-  } else {
-    renderFloorIndicator(_navSteps, idx);
+
+    updateProgressBar(idx, total);
+    updateStepNavBar(idx, total);
+    const nb=document.getElementById('stepNavBar');
+    if(nb) nb.scrollIntoView({behavior:'smooth',block:'start'});
   }
 
-  updateProgressBar(idx, total);
-  updateStepNavBar(idx, total);
-  const nb=document.getElementById('stepNavBar');
-  if(nb) nb.scrollIntoView({behavior:'smooth',block:'start'});
+  // 층 이동 시 아이소메트릭 연출 후 전환
+  if(floorChanged){
+    playIsoTransition(prevFloor, nextFloor, goingUp, applyTransition);
+  } else {
+    applyTransition();
+  }
 }
 
 /* stepNavBar 업데이트 */
