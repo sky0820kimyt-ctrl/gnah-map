@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v55</title>
+<title>강릉아산병원 안내지도 v56</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
@@ -184,6 +184,52 @@
   .step-block { margin-bottom:8px; display:none; }
   .step-block.active-step { display:block; }
   .step-block.always-show { display:block; }
+
+  /* ── Layer Sliding 애니메이션 ── */
+  @keyframes slideInFromTop{
+    from{opacity:0;transform:translateY(-60px);}
+    to  {opacity:1;transform:translateY(0);}
+  }
+  @keyframes slideInFromBottom{
+    from{opacity:0;transform:translateY(60px);}
+    to  {opacity:1;transform:translateY(0);}
+  }
+  .slide-in-top    { animation:slideInFromTop    .38s cubic-bezier(.22,.61,.36,1) both; }
+  .slide-in-bottom { animation:slideInFromBottom .38s cubic-bezier(.22,.61,.36,1) both; }
+
+  /* ── 층 인디케이터 (화면 우측 고정) ── */
+  #floorIndicator {
+    position:fixed; right:14px; top:50%; transform:translateY(-50%);
+    z-index:3000; display:none; flex-direction:column;
+    align-items:center; gap:4px;
+    background:rgba(255,255,255,0.92); border:2px solid var(--border);
+    border-radius:30px; padding:10px 6px;
+    box-shadow:0 4px 18px rgba(0,0,0,0.15);
+  }
+  #floorIndicator.visible { display:flex; }
+  .fi-item {
+    width:36px; height:36px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:900; color:var(--text-sub);
+    cursor:default; transition:all .25s; position:relative;
+  }
+  .fi-item.fi-active {
+    background:var(--mint); color:#fff;
+    box-shadow:0 2px 8px rgba(0,150,136,.45);
+    transform:scale(1.18);
+  }
+  .fi-item.fi-elevator-press {
+    animation:elevPress .5s ease both;
+  }
+  @keyframes elevPress{
+    0%  {background:var(--mint);color:#fff;transform:scale(1.18);}
+    40% {background:#004d40;transform:scale(0.9);}
+    70% {background:#00796b;transform:scale(1.05);}
+    100%{background:var(--mint);color:#fff;transform:scale(1.18);}
+  }
+  .fi-line {
+    width:2px; height:8px; background:var(--border); border-radius:1px;
+  }
 
   /* 현재 층 강조 헤딩 — 어르신: 크고 뚜렷하게 */
   .step-heading{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:14px 18px;border-radius:12px;font-size:18px;font-weight:900;letter-spacing:-0.3px;}
@@ -420,8 +466,34 @@
   }
   .marker.start::before    { background: #43a047; }
   .marker.end::before      { background: var(--orange); }
-  .marker.elevator::before { background: #a0714f; }
   .marker.connector::before{ background: #7c3aed; }
+  /* 엘리베이터·에스컬레이터: 아이콘 마커 */
+  .marker-icon {
+    position:absolute; z-index:12;
+    transform:translate(-50%,-100%);
+    display:flex; flex-direction:column; align-items:center;
+    animation:pinFloat 2s ease-in-out infinite;
+    pointer-events:none;
+  }
+  .marker-icon .mi-bubble {
+    background:#fff; border:3px solid #5b8dee;
+    border-radius:50%; width:36px; height:36px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; line-height:1;
+    box-shadow:0 3px 10px rgba(0,0,0,0.25);
+  }
+  .marker-icon .mi-bubble.elev  { border-color:#1565c0; background:#e3f2fd; }
+  .marker-icon .mi-bubble.esc   { border-color:#e65100; background:#fff3e0; }
+  .marker-icon .mi-tail {
+    width:3px; height:8px;
+    background:#5b8dee; border-radius:0 0 2px 2px;
+  }
+  .marker-icon.elev .mi-tail { background:#1565c0; }
+  .marker-icon.esc  .mi-tail { background:#e65100; }
+  .marker-icon .mi-shadow {
+    width:10px; height:4px; border-radius:50%;
+    background:rgba(0,0,0,0.18); margin-top:1px;
+  }
 
   /* 팝업 */
   #imagePopup{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:5000;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
@@ -527,7 +599,8 @@
 <div id="legendBox" class="legend" style="display:none;">
   <div class="legend-item"><div class="legend-dot" style="background:#4caf50"></div>출발지</div>
   <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div>도착지</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#b87333"></div>엘리베이터·에스컬레이터</div>
+  <div class="legend-item"><span style="font-size:16px">🛗</span>엘리베이터</div>
+  <div class="legend-item"><span style="font-size:16px">🪜</span>에스컬레이터</div>
   <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div>연결통로</div>
 </div>
 
@@ -547,6 +620,8 @@
   </div>
 </div>
 <div id="mapsContainer"></div>
+<!-- 층 인디케이터 -->
+<div id="floorIndicator"></div>
 
 <div id="imagePopup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:5000;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
   <div id="popupInner" style="position:relative;max-width:96%;max-height:92vh;overflow:hidden;border-radius:14px;">
@@ -604,7 +679,7 @@
 <div class="footer-note">
   <p>😊 병원 안내 정보가 도움이 되셨나요?</p>
   <p>수정이 필요하거나 보완할 부분이 있다면<br>
-  언제든지 <a href="/cdn-cgi/l/email-protection#64105552555d575424030a050c4a070b4a0f16"><span class="__cf_email__" data-cfemail="1a6e2b2c2b23292a5a7d747b72347975347168">[t161930@gnah.co.kr]</span></a> 로 알려주세요.</p>
+  언제든지 t161930@gnah.co.kr 로 알려주세요.</p>
 </div>
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
@@ -693,7 +768,7 @@ const positions = {
   '종합건진 ct':{floor:'신관 1층',top:'47.2%',left:'74.9%'},
   '건강관리센터(공단건진)':{floor:'신관 1층',top:'71.3%',left:'47.9%'},
   '흉부외과':{floor:'신관 2층',top:'30.1%',left:'15.8%'},
-  '심혈관센터 외래':{floor:'신관 2층',top:'32.7%',left:'51.6%'},
+  '심혈관센터 외래(심장내과)':{floor:'신관 2층',top:'32.7%',left:'51.6%'},
   '심혈관센터 검사실':{floor:'신관 2층',top:'43.1%',left:'74.2%'},
   '산부인과':{floor:'신관 2층',top:'59.9%',left:'72.5%'},
   '내분비내과':{floor:'신관 2층',top:'65.5%',left:'55.9%'},
@@ -761,6 +836,7 @@ function resolveKey(raw){
 function hideResults(){
   mapsContainer.style.display='none';
   mapsContainer.innerHTML='';
+  const fi=document.getElementById('floorIndicator'); if(fi) fi.classList.remove('visible');
   resultChip.style.display='none';
   legendBox.style.display='none';
   _navSteps=[];
@@ -867,6 +943,7 @@ function createMapBlock(step, index, total){
   const typeClass = index===0?'type-start':(index===total-1?'type-end':'type-mid');
   const block=document.createElement('div');
   block.id='step-block-'+index;
+  block.dataset.floor=step.floorLabel||step.floor||'';
   block.className='step-block fade-in'+(total===1?' always-show':'');
   if(total>1 && index===0) block.classList.add('active-step');
 
@@ -917,11 +994,23 @@ function createMapBlock(step, index, total){
   wrapper.appendChild(img);
 
   (step.markers||[]).forEach(m=>{
-    const marker=document.createElement('div');
-    marker.className='marker '+m.type;
-    marker.style.top=m.pos.top;
-    marker.style.left=m.pos.left;
-    wrapper.appendChild(marker);
+    if(m.type==='elevator'||m.type==='escalator'){
+      const ic=document.createElement('div');
+      const isEsc=(m.type==='escalator');
+      ic.className='marker-icon '+(isEsc?'esc':'elev');
+      ic.style.top=m.pos.top;
+      ic.style.left=m.pos.left;
+      const emoji=isEsc?'🪜':'🛗';
+      const cls=isEsc?'esc':'elev';
+      ic.innerHTML=`<div class="mi-bubble ${cls}">${emoji}</div><div class="mi-tail"></div><div class="mi-shadow"></div>`;
+      wrapper.appendChild(ic);
+    } else {
+      const marker=document.createElement('div');
+      marker.className='marker '+m.type;
+      marker.style.top=m.pos.top;
+      marker.style.left=m.pos.left;
+      wrapper.appendChild(marker);
+    }
   });
 
   // 복도 유도선
@@ -963,18 +1052,84 @@ function createMapBlock(step, index, total){
   return block;
 }
 
-/* ── 단계 이동 ── */
+/* ── 층 번호 추출 (슬라이드 방향 판별용) ── */
+function floorNum(label){
+  if(!label) return 0;
+  if(label.includes('지하')) return -1;
+  const m=label.match(/(\d)층/);
+  return m?parseInt(m[1]):0;
+}
+
+/* ── 층 인디케이터 렌더 ── */
+function renderFloorIndicator(steps, activeIdx){
+  const fi=document.getElementById('floorIndicator');
+  if(!fi) return;
+  // 층 목록 추출 (중복제거, 순서유지)
+  const floors=steps.map(s=>s.floorLabel||s.floor);
+  const activeFloor=floors[activeIdx];
+  // 고유 층 목록 (순서대로)
+  const unique=[...new Set(floors)];
+  if(unique.length<2){fi.classList.remove('visible');return;}
+  fi.classList.add('visible');
+
+  fi.innerHTML=unique.map((f,i)=>{
+    const isActive=(f===activeFloor);
+    // 층 레이블 축약: '본관 3층'→'3F', '신관 지하1층'→'B1'
+    let lbl=f.replace(/본관\s*/,'').replace(/신관\s*/,'');
+    lbl=lbl.replace('지하1층','B1').replace('1층','1F').replace('2층','2F').replace('3층','3F');
+    return `${i>0?'<div class="fi-line"></div>':''}<div class="fi-item${isActive?' fi-active':''}" data-floor="${f}">${lbl}</div>`;
+  }).join('');
+}
+
+/* ── 단계 이동 (Layer Sliding) ── */
 function goToStep(idx, total){
-  currentStepIndex=idx;
-  for(let i=0;i<total;i++){
-    const b=document.getElementById('step-block-'+i);
-    if(!b) continue;
-    b.classList.remove('active-step');
-    if(i===idx) b.classList.add('active-step');
+  const prevIdx=currentStepIndex;
+  const prevBlock=document.getElementById('step-block-'+prevIdx);
+  const nextBlock=document.getElementById('step-block-'+idx);
+  if(!nextBlock) return;
+
+  // 층 방향 판별
+  const prevFloor=prevBlock ? (prevBlock.dataset.floor||'') : '';
+  const nextFloor=nextBlock.dataset.floor||'';
+  const goingUp = floorNum(nextFloor) > floorNum(prevFloor);
+  const slideClass = goingUp ? 'slide-in-top' : 'slide-in-bottom';
+
+  // 이전 블록 숨김
+  if(prevBlock && prevIdx!==idx){
+    prevBlock.classList.remove('active-step');
   }
+
+  // 새 블록 표시 + 슬라이드 애니메이션
+  nextBlock.classList.remove('slide-in-top','slide-in-bottom');
+  void nextBlock.offsetWidth;
+  nextBlock.classList.add('active-step', slideClass);
+  // 애니메이션 후 클래스 제거
+  nextBlock.addEventListener('animationend', ()=>{
+    nextBlock.classList.remove('slide-in-top','slide-in-bottom');
+  }, {once:true});
+
+  currentStepIndex=idx;
+
+  // 층 이동 시 인디케이터 버튼 눌림 효과
+  if(prevFloor && nextFloor && prevFloor!==nextFloor){
+    const fi=document.getElementById('floorIndicator');
+    if(fi){
+      const activeItem=fi.querySelector('.fi-active');
+      if(activeItem){
+        activeItem.classList.add('fi-elevator-press');
+        setTimeout(()=>{
+          renderFloorIndicator(_navSteps, idx);
+        }, 300);
+      } else {
+        renderFloorIndicator(_navSteps, idx);
+      }
+    }
+  } else {
+    renderFloorIndicator(_navSteps, idx);
+  }
+
   updateProgressBar(idx, total);
   updateStepNavBar(idx, total);
-  // 스크롤: stepNavBar 기준
   const nb=document.getElementById('stepNavBar');
   if(nb) nb.scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -1287,8 +1442,8 @@ function applyGuidePath(wrapper, step, img){
 /* 해당 층의 엘리베이터·에스컬레이터 마커 목록 반환 */
 function getTransportMarkers(floor){
   const result=[];
-  if(elevators[floor])  result.push({type:'elevator',pos:elevators[floor]});
-  if(escalators[floor]) result.push({type:'elevator',pos:escalators[floor]});
+  if(elevators[floor])  result.push({type:'elevator', pos:elevators[floor]});
+  if(escalators[floor]) result.push({type:'escalator',pos:escalators[floor]});
   return result;
 }
 
@@ -1446,6 +1601,9 @@ function renderSteps(steps){
   }
 
   steps.forEach((step,i)=>mapsContainer.appendChild(createMapBlock(step,i,total)));
+  // 층 인디케이터 초기화
+  if(total>1) renderFloorIndicator(steps,0);
+  else { const fi=document.getElementById('floorIndicator'); if(fi) fi.classList.remove('visible'); }
 }
 
 /* ── 빠른 위치 찾기 ── */
