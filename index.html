@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v53</title>
+<title>강릉아산병원 안내지도 v54</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
@@ -1785,12 +1785,17 @@ function showQRBanner(fromLabel,toLabel){
 /* ════════════════════════════════════════
    통계 대시보드 (?stats)
    접근: gnahmap.netlify.app?stats
+   - Netlify 토큰 1회 입력 → 모든 기기 스캔 전체 조회
+   - 토큰 없으면 이 기기(localStorage) 통계만 표시
 ════════════════════════════════════════ */
 (function initStats(){
   if(!location.search.includes('stats')) return;
 
-  const style=document.createElement('style');
-  style.textContent=`
+  const TOKEN_KEY = 'gnah_netlify_token';
+  const SITE_KEY  = 'gnah_netlify_site_id';
+
+  const style = document.createElement('style');
+  style.textContent = `
     #statsPage{position:fixed;inset:0;background:#f0f4f2;z-index:10000;
       display:flex;flex-direction:column;font-family:'Noto Sans KR',sans-serif;overflow-y:auto;}
     #statsBar{background:#009688;color:#fff;padding:14px 18px;
@@ -1804,8 +1809,7 @@ function showQRBanner(fromLabel,toLabel){
     .s-total{text-align:center;padding:16px 0;}
     .s-num{font-size:56px;font-weight:900;color:#009688;line-height:1;}
     .s-lbl{font-size:14px;color:#3d5247;font-weight:700;margin-top:6px;}
-    .s-row{display:flex;align-items:center;gap:10px;padding:10px 0;
-      border-bottom:1px solid #eef4f2;}
+    .s-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #eef4f2;}
     .s-row:last-child{border-bottom:none;}
     .s-name{flex:1;font-size:15px;font-weight:700;color:#1a2e25;}
     .s-cnt{font-size:18px;font-weight:900;color:#009688;min-width:44px;text-align:right;}
@@ -1813,102 +1817,264 @@ function showQRBanner(fromLabel,toLabel){
     .s-bar{height:8px;background:#009688;border-radius:20px;transition:width .6s;}
     .s-btn{padding:12px 18px;border:none;border-radius:10px;cursor:pointer;
       font-size:14px;font-weight:800;font-family:'Noto Sans KR',sans-serif;color:#fff;}
+    .s-tag{display:inline-block;background:#e0f2f1;border-radius:20px;
+      padding:4px 14px;margin:3px;font-size:13px;font-weight:700;}
+    .s-mode-badge{display:inline-block;padding:3px 12px;border-radius:20px;
+      font-size:12px;font-weight:800;margin-left:8px;vertical-align:middle;}
+    .s-token-box{background:#fffde7;border:2px solid #f9a825;border-radius:12px;padding:16px;}
+    .s-token-input{width:100%;padding:12px;border:2px solid #b8d0c8;border-radius:10px;
+      font-size:14px;font-family:'Noto Sans KR',sans-serif;outline:none;box-sizing:border-box;
+      margin:8px 0;}
+    .s-spinner{display:inline-block;width:18px;height:18px;border:3px solid #cce;
+      border-top-color:#009688;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .s-recent-row{padding:9px 0;border-bottom:1px solid #eef4f2;font-size:14px;display:flex;gap:8px;align-items:center;}
+    .s-recent-row:last-child{border-bottom:none;}
+    .s-time{font-size:12px;color:#888;white-space:nowrap;}
   `;
   document.head.appendChild(style);
 
-  const div=document.createElement('div');
-  div.id='statsPage';
-  div.innerHTML=`
+  const div = document.createElement('div');
+  div.id = 'statsPage';
+  div.innerHTML = `
     <div id="statsBar">
       <h2>📊 QR 스캔 통계</h2>
-      <button onclick="renderStats()" style="background:rgba(255,255,255,.2);border:none;color:#fff;
+      <span id="sModeBadge" class="s-mode-badge" style="background:rgba(255,255,255,.25);">로컬</span>
+      <button onclick="loadStats()" style="background:rgba(255,255,255,.2);border:none;color:#fff;
         padding:7px 14px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;
-        font-family:'Noto Sans KR',sans-serif;">🔄 새로고침</button>
+        font-family:'Noto Sans KR',sans-serif;margin-left:4px;">🔄 새로고침</button>
       <button onclick="location.href=location.pathname" style="margin-left:auto;
         background:rgba(255,255,255,.2);border:none;color:#fff;padding:7px 14px;
         border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;
         font-family:'Noto Sans KR',sans-serif;">✕ 닫기</button>
     </div>
     <div id="statsBody">
-      <div class="sc">
-        <div class="s-total">
-          <div class="s-num" id="sTotalNum">-</div>
-          <div class="s-lbl">총 QR 스캔 횟수 (이 기기)</div>
+
+      <!-- Netlify 토큰 입력 -->
+      <div class="sc s-token-box" id="sTokenCard">
+        <div style="font-size:15px;font-weight:900;color:#1a2e25;margin-bottom:6px;">🔑 Netlify 토큰 연결 (전체 기기 통계)</div>
+        <div style="font-size:13px;color:#555;line-height:1.7;margin-bottom:10px;">
+          토큰을 입력하면 <b>모든 환자 기기</b>의 QR 스캔 기록을 볼 수 있어요.<br>
+          <a href="https://app.netlify.com/user/applications#personal-access-tokens"
+            target="_blank" style="color:#009688;font-weight:700;">
+            👉 토큰 발급 (app.netlify.com → User → Applications → New access token)
+          </a>
+        </div>
+        <input id="sTokenInput" class="s-token-input" type="password"
+          placeholder="nfp_xxxxxxxxxxxxxxxxxxxx">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="s-btn" style="background:#009688;" onclick="saveToken()">✅ 저장 &amp; 연결</button>
+          <button class="s-btn" style="background:#aaa;" onclick="skipToken()">이 기기 통계만 보기</button>
         </div>
       </div>
-      <div class="sc">
+
+      <!-- 전체 스캔 수 -->
+      <div class="sc" id="sTotalCard" style="display:none;">
+        <div class="s-total">
+          <div class="s-num" id="sTotalNum">-</div>
+          <div class="s-lbl" id="sTotalLbl">총 QR 스캔 횟수</div>
+        </div>
+      </div>
+
+      <!-- 오늘 스캔 -->
+      <div class="sc" id="sTodayCard" style="display:none;">
         <h3>📅 오늘 스캔</h3>
-        <div id="sTodayList"><span style="color:#aaa;font-size:14px;">집계 중...</span></div>
+        <div id="sTodayList"></div>
       </div>
-      <div class="sc">
-        <h3>📍 출발지별 스캔 수 (많은 순)</h3>
-        <div id="sFromList"><span style="color:#aaa;font-size:14px;">집계 중...</span></div>
+
+      <!-- 출발지별 -->
+      <div class="sc" id="sFromCard" style="display:none;">
+        <h3>📍 출발지별 스캔 수</h3>
+        <div id="sFromList"></div>
       </div>
-      <div class="sc" style="display:flex;gap:10px;flex-wrap:wrap;">
+
+      <!-- 최근 스캔 목록 (Netlify 모드) -->
+      <div class="sc" id="sRecentCard" style="display:none;">
+        <h3>🕐 최근 스캔 기록</h3>
+        <div id="sRecentList"></div>
+      </div>
+
+      <!-- 버튼 -->
+      <div class="sc" id="sBtnCard" style="display:none;gap:10px;flex-wrap:wrap;">
         <button class="s-btn" style="background:#e8620a;" onclick="exportCSV()">⬇ CSV 내보내기</button>
-        <a href="https://app.netlify.com" target="_blank" style="text-decoration:none;">
-          <button class="s-btn" style="background:#009688;">🌐 Netlify 전체 통계</button>
-        </a>
+        <button class="s-btn" style="background:#888;" id="sTokenResetBtn"
+          onclick="resetToken()">🔑 토큰 변경</button>
         <button class="s-btn" style="background:#aaa;"
-          onclick="if(confirm('이 기기의 통계를 초기화할까요?')){localStorage.removeItem('gnah_qr_stats_v2');renderStats();}">
-          🗑 초기화</button>
-      </div>
-      <div class="sc" style="background:#e0f2f1;font-size:14px;line-height:1.9;color:#1a2e25;font-weight:600;">
-        📱 <b>이 기기 통계</b>: 이 화면에 표시 (localStorage)<br>
-        🌐 <b>전체 기기 통계</b>: Netlify 대시보드 → Forms → <b>qr-scan</b> 에서 확인<br>
-        ⬇ CSV 내보내기로 엑셀 분석 가능
+          onclick="if(confirm('이 기기 통계를 초기화할까요?')){localStorage.removeItem('gnah_qr_stats_v2');loadStats();}">
+          🗑 로컬 초기화</button>
       </div>
     </div>
   `;
   document.body.appendChild(div);
 
-  window.renderStats = function(){
-    const s = getLocalStats();
-    // 전체
-    document.getElementById('sTotalNum').textContent = (s.__total||0).toLocaleString();
+  // ── 토큰 저장/스킵 ──
+  window.saveToken = function(){
+    const t = document.getElementById('sTokenInput').value.trim();
+    if(!t){alert('토큰을 입력해주세요.');return;}
+    localStorage.setItem(TOKEN_KEY, t);
+    loadStats();
+  };
+  window.skipToken = function(){
+    localStorage.setItem(TOKEN_KEY, 'local');
+    loadStats();
+  };
+  window.resetToken = function(){
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(SITE_KEY);
+    document.getElementById('sTokenCard').style.display='';
+    document.getElementById('sTotalCard').style.display='none';
+    document.getElementById('sTodayCard').style.display='none';
+    document.getElementById('sFromCard').style.display='none';
+    document.getElementById('sRecentCard').style.display='none';
+    document.getElementById('sBtnCard').style.display='none';
+  };
 
-    // 오늘
+  // ── Netlify API: form submissions 조회 ──
+  async function fetchNetlifyStats(token){
+    // 1) 사이트 목록에서 gnahmap 사이트 ID 찾기
+    let siteId = localStorage.getItem(SITE_KEY);
+    if(!siteId){
+      const sites = await fetch('https://api.netlify.com/api/v1/sites',
+        {headers:{Authorization:'Bearer '+token}}).then(r=>r.json());
+      const site = sites.find && sites.find(s=>s.name&&s.name.includes('gnahmap'));
+      if(!site) throw new Error('gnahmap 사이트를 찾을 수 없어요. Netlify에 배포된 사이트 이름을 확인해주세요.');
+      siteId = site.id;
+      localStorage.setItem(SITE_KEY, siteId);
+    }
+
+    // 2) form 목록에서 qr-scan form ID 찾기
+    const forms = await fetch('https://api.netlify.com/api/v1/sites/'+siteId+'/forms',
+      {headers:{Authorization:'Bearer '+token}}).then(r=>r.json());
+    const form = forms.find && forms.find(f=>f.name==='qr-scan');
+    if(!form) throw new Error('qr-scan 폼을 찾을 수 없어요. QR 스캔이 한 번이라도 있어야 폼이 생성돼요.');
+
+    // 3) submissions 가져오기 (최대 100건)
+    const subs = await fetch(
+      'https://api.netlify.com/api/v1/forms/'+form.id+'/submissions?per_page=100',
+      {headers:{Authorization:'Bearer '+token}}).then(r=>r.json());
+    return subs;
+  }
+
+  // ── 통계 렌더 (로컬) ──
+  function renderLocal(){
+    const s = getLocalStats();
+    const badge = document.getElementById('sModeBadge');
+    badge.textContent='이 기기'; badge.style.background='rgba(255,255,255,.25)';
+
+    document.getElementById('sTotalNum').textContent = (s.__total||0).toLocaleString();
+    document.getElementById('sTotalLbl').textContent = '총 QR 스캔 횟수 (이 기기)';
+
     const today = new Date().toISOString().slice(0,10);
     const todayData = Object.entries(s)
       .filter(([k])=>!k.startsWith('__'))
-      .map(([name,v])=>({name, cnt:v.dates?.[today]||0}))
+      .map(([name,v])=>({name,cnt:v.dates?.[today]||0}))
       .filter(d=>d.cnt>0).sort((a,b)=>b.cnt-a.cnt);
     document.getElementById('sTodayList').innerHTML = todayData.length
-      ? todayData.map(d=>`<span style="display:inline-block;background:#e0f2f1;border-radius:20px;
-          padding:4px 14px;margin:3px;font-size:13px;font-weight:700;">
-          ${d.name} <b style="color:#009688">${d.cnt}회</b></span>`).join('')
+      ? todayData.map(d=>`<span class="s-tag">${d.name} <b style="color:#009688">${d.cnt}회</b></span>`).join('')
       : '<span style="color:#aaa;font-size:14px;">오늘 기록 없음</span>';
 
-    // 출발지별
     const fromData = Object.entries(s)
       .filter(([k])=>!k.startsWith('__'))
-      .map(([name,v])=>({name, cnt:v.total||0}))
+      .map(([name,v])=>({name,cnt:v.total||0}))
       .filter(d=>d.cnt>0).sort((a,b)=>b.cnt-a.cnt);
+    renderFromList(fromData);
+    document.getElementById('sRecentCard').style.display='none';
+  }
+
+  // ── 통계 렌더 (Netlify) ──
+  function renderNetlify(subs){
+    const badge = document.getElementById('sModeBadge');
+    badge.textContent='전체 기기'; badge.style.background='#e8620a';
+
+    document.getElementById('sTotalNum').textContent = subs.length.toLocaleString();
+    document.getElementById('sTotalLbl').textContent = '총 QR 스캔 횟수 (전체 기기)';
+
+    const today = new Date().toISOString().slice(0,10);
+    const todaySubs = subs.filter(s=>(s.created_at||'').slice(0,10)===today);
+    const todayCount = {};
+    todaySubs.forEach(s=>{ const p=s.data?.place||'?'; todayCount[p]=(todayCount[p]||0)+1; });
+    const todayArr = Object.entries(todayCount).map(([n,c])=>({name:n,cnt:c})).sort((a,b)=>b.cnt-a.cnt);
+    document.getElementById('sTodayList').innerHTML = todayArr.length
+      ? todayArr.map(d=>`<span class="s-tag">${d.name} <b style="color:#009688">${d.cnt}회</b></span>`).join('')
+      : '<span style="color:#aaa;font-size:14px;">오늘 기록 없음</span>';
+
+    const fromCount = {};
+    subs.forEach(s=>{ const p=s.data?.place||'?'; fromCount[p]=(fromCount[p]||0)+1; });
+    const fromData = Object.entries(fromCount).map(([n,c])=>({name:n,cnt:c})).sort((a,b)=>b.cnt-a.cnt);
+    renderFromList(fromData);
+
+    // 최근 20건
+    const recentHtml = subs.slice(0,20).map(s=>{
+      const place = s.data?.place||'?';
+      const dest  = s.data?.dest||'';
+      const time  = s.created_at ? new Date(s.created_at).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+      return `<div class="s-recent-row">
+        <span style="font-weight:700;flex:1;">${place}${dest?' → '+dest:''}</span>
+        <span class="s-time">${time}</span>
+      </div>`;
+    }).join('');
+    document.getElementById('sRecentList').innerHTML = recentHtml || '<span style="color:#aaa">없음</span>';
+    document.getElementById('sRecentCard').style.display='';
+  }
+
+  function renderFromList(fromData){
     if(!fromData.length){
       document.getElementById('sFromList').innerHTML='<div style="color:#aaa;font-size:14px;padding:10px 0;">아직 스캔 기록이 없어요</div>';
       return;
     }
     const max = fromData[0].cnt;
     document.getElementById('sFromList').innerHTML = fromData.slice(0,30).map(d=>`
-      <div class="s-row">
-        <div style="flex:1">
-          <div style="display:flex;justify-content:space-between;">
-            <span class="s-name">${d.name}</span>
-            <span class="s-cnt">${d.cnt}</span>
-          </div>
-          <div class="s-bar-wrap">
-            <div class="s-bar" style="width:${Math.round(d.cnt/max*100)}%"></div>
-          </div>
+      <div class="s-row"><div style="flex:1">
+        <div style="display:flex;justify-content:space-between;">
+          <span class="s-name">${d.name}</span><span class="s-cnt">${d.cnt}</span>
         </div>
-      </div>`).join('');
+        <div class="s-bar-wrap"><div class="s-bar" style="width:${Math.round(d.cnt/max*100)}%"></div></div>
+      </div></div>`).join('');
+  }
+
+  // ── 메인 로드 ──
+  window.loadStats = async function(){
+    const token = localStorage.getItem(TOKEN_KEY);
+    if(!token){
+      // 토큰 미입력 → 토큰 카드 표시
+      document.getElementById('sTokenCard').style.display='';
+      return;
+    }
+
+    // 카드 표시
+    document.getElementById('sTokenCard').style.display='none';
+    ['sTotalCard','sTodayCard','sFromCard','sBtnCard'].forEach(id=>{
+      document.getElementById(id).style.display='';
+    });
+
+    if(token==='local'){
+      renderLocal();
+      return;
+    }
+
+    // Netlify 모드: 로딩 표시
+    document.getElementById('sTotalNum').innerHTML='<span class="s-spinner"></span>';
+    document.getElementById('sTodayList').innerHTML='<span class="s-spinner"></span>';
+    document.getElementById('sFromList').innerHTML='<span class="s-spinner"></span>';
+
+    try{
+      const subs = await fetchNetlifyStats(token);
+      renderNetlify(subs);
+    }catch(e){
+      document.getElementById('sTotalNum').textContent='오류';
+      document.getElementById('sFromList').innerHTML=
+        '<div style="color:#c00;font-size:14px;line-height:1.7;padding:8px 0;">'+
+        '⚠ '+e.message+'<br>'+
+        '<button onclick="resetToken()" style="margin-top:8px;padding:8px 14px;background:#009688;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">토큰 다시 입력</button></div>';
+    }
   };
 
   window.exportCSV = function(){
     const s = getLocalStats();
     const rows=[['장소','총 스캔','최근 스캔일']];
     Object.entries(s).filter(([k])=>!k.startsWith('__')).forEach(([name,v])=>{
-      const lastDate = v.dates ? Object.keys(v.dates).sort().pop() : '-';
-      rows.push([name, v.total||0, lastDate||'-']);
+      const last = v.dates ? Object.keys(v.dates).sort().pop() : '-';
+      rows.push([name, v.total||0, last||'-']);
     });
     rows.sort((a,b)=>b[1]-a[1]);
     const csv = rows.map(r=>r.join(',')).join('\n');
@@ -1918,7 +2084,7 @@ function showQRBanner(fromLabel,toLabel){
     a.click();
   };
 
-  renderStats();
+  loadStats();
 })();
 
 (function initQRGenerator(){
