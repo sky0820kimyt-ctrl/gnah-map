@@ -584,6 +584,16 @@
   </div>
 </div>
 
+<!-- Netlify Forms: QR 스캔 기록용 히든 폼 (Netlify가 자동 감지) -->
+<form name="qr-scan" netlify netlify-honeypot="bot-field" hidden>
+  <input type="hidden" name="form-name" value="qr-scan">
+  <input type="text"   name="bot-field">
+  <input type="text"   name="place">
+  <input type="text"   name="dest">
+  <input type="text"   name="time">
+  <input type="text"   name="ua">
+</form>
+
 <div id="loadingOverlay">
   <div id="loadingBox">
     <div class="spinner"></div>
@@ -1698,44 +1708,54 @@ function handleAdminClick(e){
 
 /* ════════════════════════════════════════
    QR 파라미터 자동 입력
-   URL: gnahmap.netlify.app?from=신경과
-        gnahmap.netlify.app?from=신경과&to=ct실
 ════════════════════════════════════════ */
-/* QR 스캔 카운트 (CountAPI 무료 서비스 사용) */
-const NAMESPACE='gnahmap-gnah';
-async function countHit(key){
+/* ── QR 스캔 통계 ──
+   1) localStorage: 이 기기 기록 → ?stats 페이지에서 확인
+   2) Netlify Forms: 모든 기기 기록 → Netlify 대시보드 Forms에서 확인
+*/
+const QR_STATS_KEY = 'gnah_qr_stats_v2';
+
+function recordQRScan(place, dest){
+  // localStorage 기록
   try{
-    const r=await fetch(`https://api.countapi.xyz/hit/${NAMESPACE}/${encodeURIComponent(key)}`);
-    const d=await r.json(); return d.value||0;
-  }catch(e){return 0;}
+    const s = JSON.parse(localStorage.getItem(QR_STATS_KEY)||'{}');
+    const today = new Date().toISOString().slice(0,10);
+    if(!s[place]) s[place] = {total:0, dates:{}};
+    s[place].total = (s[place].total||0) + 1;
+    s[place].dates[today] = (s[place].dates[today]||0) + 1;
+    s.__total = (s.__total||0) + 1;
+    s.__lastScan = new Date().toISOString();
+    localStorage.setItem(QR_STATS_KEY, JSON.stringify(s));
+  }catch(e){}
+
+  // Netlify Forms 제출 (무료, 모든 기기 기록)
+  try{
+    const fd = new FormData();
+    fd.append('form-name','qr-scan');
+    fd.append('place', place);
+    fd.append('dest',  dest||'');
+    fd.append('time',  new Date().toISOString());
+    fetch('/', {method:'POST', body:fd}).catch(()=>{});
+  }catch(e){}
 }
-async function getCount(key){
-  try{
-    const r=await fetch(`https://api.countapi.xyz/get/${NAMESPACE}/${encodeURIComponent(key)}`);
-    const d=await r.json(); return d.value||0;
-  }catch(e){return 0;}
+
+function getLocalStats(){
+  try{ return JSON.parse(localStorage.getItem(QR_STATS_KEY)||'{}'); }
+  catch(e){ return {}; }
 }
 
 (function initFromQR(){
-  if(location.search.includes('edit')||location.search.includes('qr')||location.search.includes('stats')) return;
+  if(location.search.includes('edit')||location.search.includes('qr')) return;
   const params=new URLSearchParams(location.search);
   const from=params.get('from'), to=params.get('to');
   if(!from&&!to) return;
-
-  // QR 스캔 카운트 기록
-  if(from){
-    countHit('total'); // 전체 스캔 수
-    countHit('from-'+from); // 출발지별 스캔 수
-    if(to) countHit('route-'+from+'-to-'+to); // 경로별 스캔 수
-  }
-
+  if(from) recordQRScan(from, to||'');
   function applyParams(){
     if(from){
       const key=resolveKey(from)||from;
       startInput.value=key;
       toggleClear('startInput','clearStart');
       showQRBanner(key, to?(resolveKey(to)||to):null);
-      recordQRScan(from);
     }
     if(to){
       const key=resolveKey(to)||to;
@@ -1749,22 +1769,6 @@ async function getCount(key){
   else setTimeout(applyParams,150);
 })();
 
-/* ── QR 조회수 (localStorage 기반) ── */
-const QR_STATS_KEY='gnah_qr_stats_v1';
-function recordQRScan(place){
-  try{
-    const s=JSON.parse(localStorage.getItem(QR_STATS_KEY)||'{}');
-    const today=new Date().toISOString().slice(0,10);
-    if(!s[place]) s[place]={total:0,dates:{}};
-    s[place].total=(s[place].total||0)+1;
-    s[place].dates[today]=(s[place].dates[today]||0)+1;
-    s.__lastScan=new Date().toISOString();
-    localStorage.setItem(QR_STATS_KEY,JSON.stringify(s));
-  }catch(e){}
-}
-function getQRStats(){
-  try{return JSON.parse(localStorage.getItem(QR_STATS_KEY)||'{}');}catch(e){return {};}
-}
 function showQRBanner(fromLabel,toLabel){
   const e=document.getElementById('qrBanner'); if(e) e.remove();
   const b=document.createElement('div');
@@ -1779,31 +1783,36 @@ function showQRBanner(fromLabel,toLabel){
    QR 생성기 (?qr 파라미터로 접근)
 ════════════════════════════════════════ */
 /* ════════════════════════════════════════
-   통계 대시보드 (?stats 파라미터)
+   통계 대시보드 (?stats)
+   접근: gnahmap.netlify.app?stats
 ════════════════════════════════════════ */
 (function initStats(){
   if(!location.search.includes('stats')) return;
 
   const style=document.createElement('style');
   style.textContent=`
-    #statsPage{position:fixed;inset:0;background:#f0f4f2;z-index:10000;display:flex;flex-direction:column;font-family:'Noto Sans KR',sans-serif;overflow-y:auto;}
-    #statsBar{background:#009688;color:#fff;padding:14px 18px;display:flex;align-items:center;gap:10px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.2);}
+    #statsPage{position:fixed;inset:0;background:#f0f4f2;z-index:10000;
+      display:flex;flex-direction:column;font-family:'Noto Sans KR',sans-serif;overflow-y:auto;}
+    #statsBar{background:#009688;color:#fff;padding:14px 18px;
+      display:flex;align-items:center;gap:8px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.2);}
     #statsBar h2{font-size:18px;font-weight:900;}
     #statsBody{padding:20px;max-width:700px;margin:0 auto;width:100%;}
-    .stat-card{background:#fff;border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,150,136,0.1);border:2px solid #dde8e5;}
-    .stat-card h3{font-size:15px;font-weight:800;color:#3d5247;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #eef4f2;}
-    .stat-total{text-align:center;padding:20px 0;}
-    .stat-num{font-size:56px;font-weight:900;color:#009688;line-height:1;}
-    .stat-label{font-size:14px;color:#3d5247;font-weight:700;margin-top:6px;}
-    .stat-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #eef4f2;}
-    .stat-row:last-child{border-bottom:none;}
-    .stat-name{flex:1;font-size:15px;font-weight:700;color:#1a2e25;}
-    .stat-count{font-size:18px;font-weight:900;color:#009688;min-width:40px;text-align:right;}
-    .stat-bar-wrap{width:100%;background:#eef4f2;border-radius:20px;height:8px;margin-top:4px;}
-    .stat-bar{background:var(--mint,#009688);border-radius:20px;height:8px;transition:width .6s ease;}
-    .stat-loading{text-align:center;padding:30px;color:#3d5247;font-weight:700;font-size:15px;}
-    .stat-refresh{background:#009688;color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:14px;font-weight:800;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:10px;}
-    .stat-empty{text-align:center;color:#aaa;font-size:14px;padding:20px;}
+    .sc{background:#fff;border-radius:14px;padding:20px;margin-bottom:16px;
+      box-shadow:0 2px 12px rgba(0,150,136,.1);border:2px solid #dde8e5;}
+    .sc h3{font-size:15px;font-weight:800;color:#3d5247;margin-bottom:14px;
+      padding-bottom:10px;border-bottom:2px solid #eef4f2;}
+    .s-total{text-align:center;padding:16px 0;}
+    .s-num{font-size:56px;font-weight:900;color:#009688;line-height:1;}
+    .s-lbl{font-size:14px;color:#3d5247;font-weight:700;margin-top:6px;}
+    .s-row{display:flex;align-items:center;gap:10px;padding:10px 0;
+      border-bottom:1px solid #eef4f2;}
+    .s-row:last-child{border-bottom:none;}
+    .s-name{flex:1;font-size:15px;font-weight:700;color:#1a2e25;}
+    .s-cnt{font-size:18px;font-weight:900;color:#009688;min-width:44px;text-align:right;}
+    .s-bar-wrap{height:8px;background:#eef4f2;border-radius:20px;margin-top:5px;}
+    .s-bar{height:8px;background:#009688;border-radius:20px;transition:width .6s;}
+    .s-btn{padding:12px 18px;border:none;border-radius:10px;cursor:pointer;
+      font-size:14px;font-weight:800;font-family:'Noto Sans KR',sans-serif;color:#fff;}
   `;
   document.head.appendChild(style);
 
@@ -1812,75 +1821,108 @@ function showQRBanner(fromLabel,toLabel){
   div.innerHTML=`
     <div id="statsBar">
       <h2>📊 QR 스캔 통계</h2>
-      <button onclick="loadStats()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:8px 14px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">🔄 새로고침</button>
-      <button onclick="location.href=location.pathname" style="margin-left:8px;background:rgba(255,255,255,0.2);border:none;color:#fff;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">✕ 닫기</button>
+      <button onclick="renderStats()" style="background:rgba(255,255,255,.2);border:none;color:#fff;
+        padding:7px 14px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;
+        font-family:'Noto Sans KR',sans-serif;">🔄 새로고침</button>
+      <button onclick="location.href=location.pathname" style="margin-left:auto;
+        background:rgba(255,255,255,.2);border:none;color:#fff;padding:7px 14px;
+        border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;
+        font-family:'Noto Sans KR',sans-serif;">✕ 닫기</button>
     </div>
     <div id="statsBody">
-      <div class="stat-card">
-        <div class="stat-total">
-          <div class="stat-num" id="statTotal">-</div>
-          <div class="stat-label">총 QR 스캔 횟수</div>
+      <div class="sc">
+        <div class="s-total">
+          <div class="s-num" id="sTotalNum">-</div>
+          <div class="s-lbl">총 QR 스캔 횟수 (이 기기)</div>
         </div>
       </div>
-      <div class="stat-card">
-        <h3>📍 출발지별 스캔 수</h3>
-        <div id="statFromList"><div class="stat-loading">불러오는 중...</div></div>
+      <div class="sc">
+        <h3>📅 오늘 스캔</h3>
+        <div id="sTodayList"><span style="color:#aaa;font-size:14px;">집계 중...</span></div>
       </div>
-      <div class="stat-card" style="background:#e0f2f1;">
-        <h3>📋 안내</h3>
-        <div style="font-size:14px;line-height:1.9;color:#1a2e25;font-weight:600;">
-          • QR코드가 스캔될 때마다 자동 기록돼요<br>
-          • 데이터는 CountAPI 서버에 저장돼요 (무료)<br>
-          • 통계는 실시간으로 누적돼요<br>
-          • QR 생성: <a href="?qr" style="color:#009688;font-weight:800;">gnahmap.netlify.app?qr</a>
-        </div>
+      <div class="sc">
+        <h3>📍 출발지별 스캔 수 (많은 순)</h3>
+        <div id="sFromList"><span style="color:#aaa;font-size:14px;">집계 중...</span></div>
+      </div>
+      <div class="sc" style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="s-btn" style="background:#e8620a;" onclick="exportCSV()">⬇ CSV 내보내기</button>
+        <a href="https://app.netlify.com" target="_blank" style="text-decoration:none;">
+          <button class="s-btn" style="background:#009688;">🌐 Netlify 전체 통계</button>
+        </a>
+        <button class="s-btn" style="background:#aaa;"
+          onclick="if(confirm('이 기기의 통계를 초기화할까요?')){localStorage.removeItem('gnah_qr_stats_v2');renderStats();}">
+          🗑 초기화</button>
+      </div>
+      <div class="sc" style="background:#e0f2f1;font-size:14px;line-height:1.9;color:#1a2e25;font-weight:600;">
+        📱 <b>이 기기 통계</b>: 이 화면에 표시 (localStorage)<br>
+        🌐 <b>전체 기기 통계</b>: Netlify 대시보드 → Forms → <b>qr-scan</b> 에서 확인<br>
+        ⬇ CSV 내보내기로 엑셀 분석 가능
       </div>
     </div>
   `;
   document.body.appendChild(div);
 
-  async function loadStats(){
-    // 전체 스캔 수
-    const total=await getCount('total');
-    document.getElementById('statTotal').textContent=total.toLocaleString();
+  window.renderStats = function(){
+    const s = getLocalStats();
+    // 전체
+    document.getElementById('sTotalNum').textContent = (s.__total||0).toLocaleString();
 
-    // 출발지별: positions의 모든 장소 조회
-    const fromListEl=document.getElementById('statFromList');
-    fromListEl.innerHTML='<div class="stat-loading">출발지별 데이터 조회 중...</div>';
+    // 오늘
+    const today = new Date().toISOString().slice(0,10);
+    const todayData = Object.entries(s)
+      .filter(([k])=>!k.startsWith('__'))
+      .map(([name,v])=>({name, cnt:v.dates?.[today]||0}))
+      .filter(d=>d.cnt>0).sort((a,b)=>b.cnt-a.cnt);
+    document.getElementById('sTodayList').innerHTML = todayData.length
+      ? todayData.map(d=>`<span style="display:inline-block;background:#e0f2f1;border-radius:20px;
+          padding:4px 14px;margin:3px;font-size:13px;font-weight:700;">
+          ${d.name} <b style="color:#009688">${d.cnt}회</b></span>`).join('')
+      : '<span style="color:#aaa;font-size:14px;">오늘 기록 없음</span>';
 
-    const places=Object.keys(positions);
-    const counts=await Promise.all(places.map(p=>getCount('from-'+p)));
-    const data=places.map((p,i)=>({name:p,count:counts[i]}))
-      .filter(d=>d.count>0)
-      .sort((a,b)=>b.count-a.count);
-
-    if(data.length===0){
-      fromListEl.innerHTML='<div class="stat-empty">아직 스캔 기록이 없어요</div>';
+    // 출발지별
+    const fromData = Object.entries(s)
+      .filter(([k])=>!k.startsWith('__'))
+      .map(([name,v])=>({name, cnt:v.total||0}))
+      .filter(d=>d.cnt>0).sort((a,b)=>b.cnt-a.cnt);
+    if(!fromData.length){
+      document.getElementById('sFromList').innerHTML='<div style="color:#aaa;font-size:14px;padding:10px 0;">아직 스캔 기록이 없어요</div>';
       return;
     }
-    const max=data[0].count;
-    fromListEl.innerHTML=data.slice(0,20).map(d=>`
-      <div class="stat-row">
+    const max = fromData[0].cnt;
+    document.getElementById('sFromList').innerHTML = fromData.slice(0,30).map(d=>`
+      <div class="s-row">
         <div style="flex:1">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span class="stat-name">${d.name}</span>
-            <span class="stat-count">${d.count}</span>
+          <div style="display:flex;justify-content:space-between;">
+            <span class="s-name">${d.name}</span>
+            <span class="s-cnt">${d.cnt}</span>
           </div>
-          <div class="stat-bar-wrap">
-            <div class="stat-bar" style="width:${Math.round(d.count/max*100)}%"></div>
+          <div class="s-bar-wrap">
+            <div class="s-bar" style="width:${Math.round(d.cnt/max*100)}%"></div>
           </div>
         </div>
-      </div>
-    `).join('');
-  }
+      </div>`).join('');
+  };
 
-  window.loadStats=loadStats;
-  loadStats();
+  window.exportCSV = function(){
+    const s = getLocalStats();
+    const rows=[['장소','총 스캔','최근 스캔일']];
+    Object.entries(s).filter(([k])=>!k.startsWith('__')).forEach(([name,v])=>{
+      const lastDate = v.dates ? Object.keys(v.dates).sort().pop() : '-';
+      rows.push([name, v.total||0, lastDate||'-']);
+    });
+    rows.sort((a,b)=>b[1]-a[1]);
+    const csv = rows.map(r=>r.join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+    a.download = 'QR통계_'+new Date().toISOString().slice(0,10)+'.csv';
+    a.click();
+  };
+
+  renderStats();
 })();
 
 (function initQRGenerator(){
   if(!location.search.includes('qr')) return;
-
   const style=document.createElement('style');
   style.textContent=`
     #qrGenerator{position:fixed;inset:0;background:#f0f4f2;z-index:10000;display:flex;flex-direction:column;font-family:'Noto Sans KR',sans-serif;overflow-y:auto;}
@@ -1898,6 +1940,8 @@ function showQRBanner(fromLabel,toLabel){
     #qrCanvas{border:3px solid #009688;border-radius:12px;padding:8px;background:#fff;}
     .qg-pos-btn{padding:8px 14px;border:2px solid #b8d0c8;border-radius:20px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;color:#1a2e25;margin:3px;transition:all .15s;}
     .qg-pos-btn:hover{border-color:#009688;background:#e0f2f1;color:#009688;}
+    .stat-bar-wrap{background:#e0f2f1;border-radius:8px;height:12px;overflow:hidden;margin-top:4px;}
+    .stat-bar{background:#009688;height:100%;border-radius:8px;transition:width .6s;}
   `;
   document.head.appendChild(style);
 
@@ -1927,20 +1971,17 @@ function showQRBanner(fromLabel,toLabel){
         </div>
       </div>
       <div class="qgc">
-        <div class="qgl">⚡ 장소 빠른 선택</div>
-        <div id="qgPosList" style="display:flex;flex-wrap:wrap;"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div class="qgl" style="margin:0;">📊 QR 조회수 통계</div>
+          <button class="qgb g" onclick="loadAllStats()" style="padding:8px 16px;font-size:13px;">🔄 새로고침</button>
+        </div>
+        <div id="qgStats">
+          <div style="text-align:center;color:#888;padding:20px;font-size:14px;">🔄 새로고침을 눌러 통계를 불러오세요</div>
+        </div>
       </div>
       <div class="qgc">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-          <div class="qgl" style="margin:0;">📊 QR 조회수</div>
-          <div style="display:flex;gap:6px;">
-            <button onclick="loadStats()" class="qgb gr" style="font-size:12px;padding:6px 12px;">🔄 새로고침</button>
-            <button onclick="if(confirm('조회수를 초기화할까요?')){localStorage.removeItem(QR_STATS_KEY);loadStats();}" class="qgb gr" style="font-size:12px;padding:6px 12px;color:#c62828;">🗑 초기화</button>
-          </div>
-        </div>
-        <div id="qgSummary" style="background:#f0f9f7;border-radius:10px;padding:12px;margin-bottom:10px;font-size:13px;font-weight:700;"></div>
-        <div id="qgTable"></div>
-        <p style="font-size:11px;color:#6b7c74;margin-top:8px;">💡 이 기기에서 스캔된 QR 횟수가 기록돼요.</p>
+        <div class="qgl">⚡ 장소 빠른 선택</div>
+        <div id="qgPosList" style="display:flex;flex-wrap:wrap;"></div>
       </div>
       <div class="qgc" style="background:#e0f2f1;">
         <div class="qgl">📋 사용 방법</div>
@@ -1949,15 +1990,13 @@ function showQRBanner(fromLabel,toLabel){
           2️⃣ QR 생성 버튼 클릭<br>
           3️⃣ QR 이미지 저장 후 인쇄<br>
           4️⃣ 해당 장소에 QR코드 부착<br><br>
-          📱 환자가 QR 스캔 시 → 출발지 자동 입력!<br>
-          📊 조회수는 이 페이지에서 확인 가능
+          📱 환자가 QR 스캔 시 → 출발지 자동입력 + 조회수 기록!
         </div>
       </div>
     </div>
   `;
   document.body.appendChild(div);
 
-  // 장소 목록 채우기
   const posList=document.getElementById('qgPosList');
   const fromList=document.getElementById('qgFromList');
   Object.keys(positions).forEach(name=>{
@@ -1999,768 +2038,37 @@ function showQRBanner(fromLabel,toLabel){
     const from=document.getElementById('qgFrom').value.trim();
     const a=document.createElement('a');
     a.download=`QR_${from||'위치'}.png`;
-    a.href=canvas.toDataURL('image/png');
-    a.click();
+    a.href=canvas.toDataURL('image/png'); a.click();
   };
 
-  window.loadStats=function(){
-    const s=getQRStats();
-    const entries=Object.entries(s).filter(([k])=>k!=='__lastScan').sort(([,a],[,b])=>(b.total||0)-(a.total||0));
-    const total=entries.reduce((acc,[,v])=>acc+(v.total||0),0);
-    const today=new Date().toISOString().slice(0,10);
-    const lastScan=s.__lastScan?new Date(s.__lastScan).toLocaleString('ko-KR'):'없음';
-
-    document.getElementById('qgSummary').innerHTML=
-      `<div style="display:flex;gap:20px;flex-wrap:wrap;">
-        <span>📱 총 스캔: <b style="color:#009688;font-size:17px;">${total}회</b></span>
-        <span>📍 등록 장소: <b style="color:#009688;font-size:17px;">${entries.length}곳</b></span>
-        <span style="color:#888;font-size:11px;align-self:center;">마지막: ${lastScan}</span>
-      </div>`;
-
-    if(!entries.length){
-      document.getElementById('qgTable').innerHTML=
-        '<p style="color:#888;text-align:center;padding:16px;">아직 스캔 기록이 없어요.<br>QR 스캔 시 자동으로 기록됩니다.</p>';
+  window.loadAllStats=async function(){
+    const el=document.getElementById('qgStats');
+    if(!el) return;
+    el.innerHTML='<div style="text-align:center;color:#009688;padding:20px;font-size:14px;">📊 불러오는 중...</div>';
+    const names=Object.keys(positions);
+    const results=await Promise.all(names.map(async name=>({name,count:await getQRCount(name)})));
+    const active=results.filter(r=>r.count>0).sort((a,b)=>b.count-a.count);
+    if(active.length===0){
+      el.innerHTML='<div style="text-align:center;color:#888;padding:20px;font-size:14px;">아직 QR 스캔 기록이 없어요.<br>QR코드를 부착하고 스캔해보세요!</div>';
       return;
     }
-
-    const rows=entries.map(([place,v],i)=>`
-      <tr style="border-bottom:1px solid #eef4f2;${i===0?'background:#fffbe6;':''}">
-        <td style="padding:9px 10px;font-weight:700;">${['🥇','🥈','🥉'][i]||'  '} ${place}</td>
-        <td style="padding:9px;text-align:center;font-weight:900;color:#009688;font-size:16px;">${v.total||0}</td>
-        <td style="padding:9px;text-align:center;font-weight:700;color:#e8620a;">${v.dates&&v.dates[today]?v.dates[today]:'-'}</td>
-        <td style="padding:9px;font-size:11px;color:#888;">${v.dates?Object.keys(v.dates).sort().pop()||'-':'-'}</td>
-      </tr>`).join('');
-
-    document.getElementById('qgTable').innerHTML=`
-      <table style="width:100%;border-collapse:collapse;font-size:13px;">
-        <thead><tr style="background:#e0f2f1;">
-          <th style="padding:8px 10px;text-align:left;font-weight:800;">장소</th>
-          <th style="padding:8px;text-align:center;font-weight:800;">총</th>
-          <th style="padding:8px;text-align:center;font-weight:800;">오늘</th>
-          <th style="padding:8px;text-align:left;font-weight:800;">최근 날짜</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>`;
+    const maxC=active[0].count;
+    const total=active.reduce((s,r)=>s+r.count,0);
+    el.innerHTML=active.map(({name,count})=>{
+      const pct=Math.round(count/maxC*100);
+      const floor=positions[name]?.floor||'';
+      return `<div style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <div><span style="font-size:15px;font-weight:800;color:#1a2e25;">${name}</span>
+          <span style="font-size:12px;color:#888;margin-left:6px;">${floor}</span></div>
+          <span style="font-size:16px;font-weight:900;color:#009688;">${count}회</span>
+        </div>
+        <div class="stat-bar-wrap"><div class="stat-bar" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('')+
+    `<div style="border-top:2px solid #e0f2f1;margin-top:14px;padding-top:12px;display:flex;justify-content:space-between;font-size:16px;font-weight:900;color:#1a2e25;">
+      <span>📱 총 QR 스캔 수</span><span style="color:#009688;">${total}회</span></div>`;
   };
-
-  // 페이지 열리면 자동 로드
-  loadStats();
-})();
-
-/* ════════════════════════════════════════
-   복도 에디터 (?edit 파라미터로 접근)
-════════════════════════════════════════ */
-(function initEditor(){
-  if(!location.search.includes('edit')) return;
-
-  const pw = prompt('에디터 비밀번호:');
-  if(pw !== 'gnah2025'){ alert('비밀번호가 틀렸습니다.'); return; }
-
-  // ── 에디터 UI 삽입 ──
-  const style = document.createElement('style');
-  style.textContent = `
-    #corridorEditor {
-      position:fixed; top:0; left:0; right:0; bottom:0;
-      background:#f0f4f3; z-index:10000; display:flex; flex-direction:column;
-      font-family:'Noto Sans KR',sans-serif; overflow:hidden;
-    }
-    #edToolbar {
-      background:#009688; color:#fff; padding:8px 10px;
-      display:flex; align-items:center; gap:6px; flex-wrap:wrap;
-      box-shadow:0 2px 8px rgba(0,0,0,0.2);
-      overflow-x:auto; -webkit-overflow-scrolling:touch;
-    }
-    #edToolbar h2 { font-size:15px; font-weight:700; margin-right:4px; }
-    #edFloorSel {
-      padding:6px 10px; border-radius:8px; border:none;
-      font-family:'Noto Sans KR',sans-serif; font-size:13px;
-      background:#fff; color:#2c3e35; font-weight:600; cursor:pointer;
-    }
-    .ed-btn {
-      padding:6px 14px; border-radius:8px; border:none; cursor:pointer;
-      font-family:'Noto Sans KR',sans-serif; font-size:13px; font-weight:700;
-    }
-    .ed-btn.green  { background:#e8f5e9; color:#2e7d32; }
-    .ed-btn.orange { background:#ff8c42; color:#fff; }
-    .ed-btn.red    { background:#ffebee; color:#c62828; }
-    .ed-btn.purple { background:#7c3aed; color:#fff; }
-    .ed-btn.blue   { background:#e3f2fd; color:#1565c0; }
-    #edStatus {
-      font-size:12px; margin-left:auto; opacity:.85; white-space:nowrap;
-    }
-
-    #edMapImg {
-      /* object-fit 제거: 실제 이미지 크기 = getBoundingClientRect 크기 일치 */
-      display:block;
-      max-width:100%; max-height:100%;
-      width:auto; height:auto;
-      position:absolute; top:50%; left:50%;
-      transform:translate(-50%,-50%);
-      user-select:none; -webkit-user-drag:none;
-    }
-    #edCanvas {
-      flex:1; position:relative; overflow:hidden; background:#e8eeec;
-    }
-    #edSvg {
-      position:absolute; top:0; left:0; width:100%; height:100%;
-      pointer-events:none;
-    }
-    .ed-node {
-      position:absolute; width:26px; height:26px; border-radius:50%;
-      background:#009688; border:2.5px solid #fff;
-      box-shadow:0 2px 6px rgba(0,0,0,0.35);
-      transform:translate(-50%,-50%);
-      cursor:grab; z-index:20;
-      display:flex; align-items:center; justify-content:center;
-      font-size:9px; color:#fff; font-weight:700;
-      user-select:none; touch-action:none;
-      transition:background .15s, transform .15s;
-    }
-    .ed-node:hover { background:#00796b; transform:translate(-50%,-50%) scale(1.3); }
-    .ed-node.selected { background:#ff8c42; transform:translate(-50%,-50%) scale(1.4); }
-    #edPanel {
-      background:#fff; border-top:1px solid #dde8e5;
-      padding:10px 14px; font-size:12.5px; color:#2c3e35;
-      display:flex; gap:14px; align-items:center; flex-wrap:wrap;
-    }
-    #edPanel b { color:#009688; }
-    #edHint { background:#e0f2f1; border-radius:6px; padding:4px 10px; font-size:11.5px; color:#00695c; }
-    #edExportBox {
-      display:none; position:fixed; top:50%; left:50%;
-      transform:translate(-50%,-50%);
-      background:#fff; border-radius:14px; padding:20px;
-      box-shadow:0 8px 40px rgba(0,0,0,0.3);
-      z-index:11000; width:90%; max-width:600px;
-    }
-    #edExportBox h3 { font-size:14px; margin-bottom:10px; color:#009688; }
-    #edExportText {
-      width:100%; height:220px; font-size:11px; font-family:monospace;
-      border:1px solid #dde8e5; border-radius:8px; padding:8px;
-      resize:none; color:#2c3e35;
-    }
-    #edOverlay {
-      display:none; position:fixed; inset:0; background:rgba(0,0,0,.5);
-      z-index:10999;
-    }
-    /* 불러오기: 기존 팝업 유지 */
-    #edImportBox {
-      display:none; position:fixed; top:50%; left:50%;
-      transform:translate(-50%,-50%);
-      background:#fff; border-radius:14px; padding:20px;
-      box-shadow:0 8px 40px rgba(0,0,0,0.3);
-      z-index:11000; width:90%; max-width:600px;
-    }
-    #edImportBox h3 { font-size:14px; margin-bottom:10px; color:#009688; }
-
-    /* 경로 미리보기: 지도 아래 패널 (팝업 아님) */
-    #edPreviewPanel {
-      display:none;
-      background:#fff; border-top:2px solid var(--mint,#009688);
-      padding:10px 14px;
-      flex-shrink:0;
-    }
-    #edPreviewPanel.active { display:block; }
-    .ed-preview-row {
-      display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;
-      margin-bottom:8px;
-    }
-    .ed-preview-row input {
-      flex:1; min-width:100px; padding:7px 10px;
-      border:1.5px solid #dde8e5; border-radius:8px;
-      font-size:13px; font-family:'Noto Sans KR',sans-serif;
-    }
-    .ed-preview-row label {
-      font-size:11px; font-weight:700; color:#666;
-      display:block; margin-bottom:3px;
-    }
-    #edPreviewResult {
-      font-size:11.5px; color:#2c3e35;
-      background:#f5f7f6; border-radius:8px;
-      padding:8px 10px; line-height:1.7;
-      white-space:pre-wrap; max-height:80px; overflow-y:auto;
-    }
-    #edImportText {
-      width:100%; height:200px; font-size:11px; font-family:monospace;
-      border:1px solid #dde8e5; border-radius:8px; padding:8px;
-      resize:none; color:#2c3e35;
-    }
-    .ed-node.edge-from { background:#ff8c42 !important; }
-  `;
-  document.head.appendChild(style);
-
-  const edDiv = document.createElement('div');
-  edDiv.id = 'corridorEditor';
-  edDiv.innerHTML = `
-    <div id="edToolbar">
-      <h2>🗺️ 복도 에디터</h2>
-      <select id="edFloorSel"></select>
-      <button class="ed-btn green"  id="edAddNode">＋ 노드</button>
-      <button class="ed-btn blue"   id="edAddEdge">🔗 엣지</button>
-      <button class="ed-btn red"    id="edDelNode">🗑 삭제</button>
-      <button class="ed-btn orange" id="edSave">💾 내보내기</button>
-      <button class="ed-btn green"  id="edImport">📥 불러오기</button>
-      <button class="ed-btn purple" id="edPreview">🔍 경로 미리보기</button>
-      <button class="ed-btn red"    id="edClose" style="margin-left:auto">✕ 닫기</button>
-    </div>
-    <div id="edCanvas">
-      <img id="edMapImg" src="" alt="" draggable="false">
-      <svg id="edSvg"></svg>
-    </div>
-    <div id="edPanel">
-      <span id="edHint">📌 모드: <b id="edModeLabel">이동</b></span>
-      <span>선택: <b id="edSelLabel">없음</b></span>
-      <span>좌표: <b id="edCoordLabel">-</b></span>
-      <span id="edSaveStatus" style="margin-left:auto;font-size:11px;color:#43a047;font-weight:600;"></span>
-      <span id="edStatusMsg" style="font-size:11px;color:#999">드래그=이동 | 엣지모드: 두 노드 순서대로 클릭</span>
-    </div>
-    <div id="edPreviewPanel">
-      <div class="ed-preview-row">
-        <div style="flex:1;min-width:100px">
-          <label>출발지</label>
-          <input id="edPreviewFrom" type="text" placeholder="예: 신경과" list="edFromList">
-          <datalist id="edFromList"></datalist>
-        </div>
-        <div style="flex:1;min-width:100px">
-          <label>도착지</label>
-          <input id="edPreviewTo" type="text" placeholder="예: ct실" list="edToList">
-          <datalist id="edToList"></datalist>
-        </div>
-        <button class="ed-btn orange" id="edPreviewRun" style="padding:8px 16px;align-self:flex-end">▶ 실행</button>
-        <button class="ed-btn red"    id="edPreviewClose" style="padding:8px 12px;align-self:flex-end">✕</button>
-      </div>
-      <div id="edPreviewResult"></div>
-    </div>
-  `;
-  document.body.appendChild(edDiv);
-
-  // ── 팝업들 ──
-  const exportBox = document.createElement('div');
-  exportBox.id = 'edExportBox';
-  exportBox.innerHTML = `
-    <h3>💾 corridorGraph 내보내기</h3>
-    <textarea id="edExportText" readonly></textarea>
-    <div style="display:flex;gap:8px;margin-top:10px;">
-      <button class="ed-btn orange" id="edCopyBtn" style="flex:1">📋 클립보드 복사</button>
-      <button class="ed-btn green"  id="edSaveLocal" style="flex:1">💾 브라우저에 저장</button>
-      <button class="ed-btn red"    id="edExportClose" style="flex:1">닫기</button>
-    </div>
-    <p style="font-size:11px;color:#888;margin-top:8px;">💡 "브라우저에 저장"을 누르면 다음에 에디터를 열 때 자동으로 불러와요.</p>
-  `;
-  document.body.appendChild(exportBox);
-
-  const importBox = document.createElement('div');
-  importBox.id = 'edImportBox';
-  importBox.innerHTML = `
-    <h3>📥 corridorGraph 불러오기</h3>
-    <p style="font-size:12px;color:#666;margin-bottom:8px;">다른 컴퓨터에서 내보낸 코드를 붙여넣으세요.</p>
-    <textarea id="edImportText" placeholder="const corridorGraph = { ... } 코드를 여기에 붙여넣으세요"></textarea>
-    <div style="display:flex;gap:8px;margin-top:10px;">
-      <button class="ed-btn orange" id="edImportApply" style="flex:1">✅ 적용</button>
-      <button class="ed-btn red"    id="edImportClose" style="flex:1">취소</button>
-    </div>
-  `;
-  document.body.appendChild(importBox);
-
-  // previewBox → #edPreviewPanel (지도 아래 패널로 이동됨)
-
-  const overlay = document.createElement('div');
-  overlay.id = 'edOverlay';
-  document.body.appendChild(overlay);
-
-  // ── 저장/불러오기 키 ──
-  const STORAGE_KEY = 'gnah_corridorGraph_v1';
-
-  // ── 상태 ──
-  let currentFloor = Object.keys(corridorGraph)[0];
-  // localStorage에 저장된 게 있으면 우선 사용
-  let workGraph = (() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        document.getElementById('edSaveStatus').textContent = '💾 저장된 데이터 불러옴';
-        return parsed;
-      }
-    } catch(e) {}
-    return JSON.parse(JSON.stringify(corridorGraph));
-  })();
-
-  let mode = 'move';
-  let selectedNode = null;
-  let edgeFrom = null;
-  let dragging = null;
-  let dragOffX = 0, dragOffY = 0;
-
-  const floorSel    = document.getElementById('edFloorSel');
-  const mapImg      = document.getElementById('edMapImg');
-  const svg         = document.getElementById('edSvg');
-  const canvas      = document.getElementById('edCanvas');
-  const saveStatus  = document.getElementById('edSaveStatus');
-  const modeLabel   = document.getElementById('edModeLabel');
-  const selLabel    = document.getElementById('edSelLabel');
-  const coordLabel  = document.getElementById('edCoordLabel');
-  const statusMsg   = document.getElementById('edStatusMsg');
-
-  // 층 선택 드롭다운
-  Object.keys(corridorGraph).forEach(f => {
-    const opt = document.createElement('option');
-    opt.value = f; opt.textContent = f;
-    floorSel.appendChild(opt);
-  });
-
-  // datalist 채우기
-  function fillDatalist() {
-    ['edFromList','edToList'].forEach(id => {
-      const dl = document.getElementById(id);
-      dl.innerHTML = Object.keys(positions).map(k=>`<option value="${k}">`).join('');
-    });
-  }
-  fillDatalist();
-
-  function setMode(m, label) {
-    mode = m; edgeFrom = null; selectedNode = null;
-    modeLabel.textContent = label;
-    statusMsg.textContent = {
-      move:    '드래그=이동 | 엣지모드: 두 노드 순서대로 클릭',
-      addNode: '지도를 클릭해서 노드를 추가하세요',
-      addEdge: '연결할 첫 번째 노드를 클릭하세요',
-      delNode: '삭제할 노드를 클릭하세요',
-    }[m];
-    renderAll();
-  }
-
-  function loadFloor(floor) {
-    currentFloor = floor;
-    if (!workGraph[floor]) workGraph[floor] = {nodes:{},edges:[]};
-    mapImg.src = maps[floor];
-    selectedNode = null; edgeFrom = null;
-    renderAll();
-  }
-
-  // ── 렌더링 ──
-  function getImgRect() {
-    // object-fit 없이 absolute center 방식이므로 getBoundingClientRect() = 실제 이미지 크기
-    return mapImg.getBoundingClientRect();
-  }
-  function getCanvasRect() { return canvas.getBoundingClientRect(); }
-
-  /* 퍼센트 좌표 → 캔버스 픽셀 좌표 변환
-     이미지가 캔버스 중앙에 위치하므로 offset 계산이 핵심 */
-  function pctToCanvas(xPct, yPct) {
-    const ir = getImgRect();
-    const cr = getCanvasRect();
-    return {
-      x: (ir.left - cr.left) + xPct / 100 * ir.width,
-      y: (ir.top  - cr.top)  + yPct / 100 * ir.height
-    };
-  }
-
-  /* 캔버스 픽셀 → 이미지 퍼센트 좌표 변환 */
-  function canvasToPct(clientX, clientY) {
-    const ir = getImgRect();
-    const xP = Math.round((clientX - ir.left) / ir.width  * 1000) / 10;
-    const yP = Math.round((clientY - ir.top)  / ir.height * 1000) / 10;
-    return {
-      x: Math.max(0, Math.min(100, xP)),
-      y: Math.max(0, Math.min(100, yP))
-    };
-  }
-
-  function renderAll(previewPts) {
-    svg.innerHTML = '';
-    canvas.querySelectorAll('.ed-node').forEach(n=>n.remove());
-    const g = workGraph[currentFloor];
-    if (!g) return;
-
-    // ── 엣지 ──
-    (g.edges||[]).forEach(([a,b]) => {
-      const na = g.nodes[a], nb = g.nodes[b];
-      if (!na||!nb) return;
-      const p1 = pctToCanvas(na.x, na.y);
-      const p2 = pctToCanvas(nb.x, nb.y);
-      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-      line.setAttribute('x1',p1.x); line.setAttribute('y1',p1.y);
-      line.setAttribute('x2',p2.x); line.setAttribute('y2',p2.y);
-      line.setAttribute('stroke','rgba(0,150,136,0.55)');
-      line.setAttribute('stroke-width','2.5');
-      // 엣지 삭제 (더블클릭)
-      line.style.cursor = 'pointer';
-      line.setAttribute('pointer-events','stroke');
-      const ea=a,eb=b;
-      line.addEventListener('dblclick', ()=>{
-        if(!confirm(`엣지 ${ea}↔${eb} 를 삭제하시겠습니까?`)) return;
-        workGraph[currentFloor].edges = workGraph[currentFloor].edges.filter(([x,y])=>!(x===ea&&y===eb)&&!(x===eb&&y===ea));
-        renderAll();
-      });
-      svg.appendChild(line);
-    });
-
-    // ── 미리보기 경로선 ──
-    if (previewPts && previewPts.length >= 2) {
-      const ps = previewPts.map(p => {
-        const c2 = pctToCanvas(p.x, p.y);
-        return `${c2.x},${c2.y}`;
-      }).join(' ');
-      const fill = document.createElementNS('http://www.w3.org/2000/svg','polyline');
-      fill.setAttribute('points',ps);
-      fill.setAttribute('fill','none');
-      fill.setAttribute('stroke','rgba(255,140,66,0.35)');
-      fill.setAttribute('stroke-width','8');
-      fill.setAttribute('stroke-linecap','square');
-      fill.setAttribute('stroke-linejoin','miter');
-      svg.appendChild(fill);
-      const line = document.createElementNS('http://www.w3.org/2000/svg','polyline');
-      line.setAttribute('points',ps);
-      line.setAttribute('fill','none');
-      line.setAttribute('stroke','#ff8c42');
-      line.setAttribute('stroke-width','2.5');
-      line.setAttribute('stroke-linecap','square');
-      line.setAttribute('stroke-linejoin','miter');
-      svg.appendChild(line);
-    }
-
-    // ── 노드 ──
-    Object.entries(g.nodes).forEach(([id, n]) => {
-      const pos = pctToCanvas(n.x, n.y);
-      const nd = document.createElement('div');
-      nd.className = 'ed-node' + (id===selectedNode?' selected':'') + (id===edgeFrom?' edge-from':'');
-      nd.textContent = String(id).length <= 3 ? id : id.slice(0,3);
-      nd.title = `${id}  x:${n.x} y:${n.y}`;
-      nd.style.left = pos.x + 'px';
-      nd.style.top  = pos.y + 'px';
-      nd.dataset.id = id;
-
-      function startDrag(clientX, clientY) {
-        selectedNode = id;
-        selLabel.textContent = `${id} (${n.x}, ${n.y})`;
-        dragging = id;
-        // 이미지 기준 오프셋: 노드 중심과 터치/클릭 위치의 차이
-        // dragOff를 0으로 하면 손가락/마우스 위치 = 노드 중심
-        dragOffX = 0;
-        dragOffY = 0;
-        renderAll();
-      }
-      function handleNodeTap(clientX, clientY) {
-        if (mode==='delNode') { deleteNode(id); return; }
-        if (mode==='addEdge') {
-          if (!edgeFrom) {
-            edgeFrom = id;
-            statusMsg.textContent = `"${id}" 선택됨 → 두 번째 노드 탭`;
-            renderAll();
-          } else if (edgeFrom !== id) {
-            addEdge(edgeFrom, id); edgeFrom = null;
-          }
-          return;
-        }
-        startDrag(clientX, clientY);
-      }
-      nd.addEventListener('mousedown', e => {
-        e.stopPropagation();
-        handleNodeTap(e.clientX, e.clientY);
-      });
-      nd.addEventListener('touchstart', e => {
-        e.stopPropagation();
-        e.preventDefault();
-        const t = e.touches[0];
-        handleNodeTap(t.clientX, t.clientY);
-      }, {passive: false});
-      canvas.appendChild(nd);
-    });
-  }
-
-  // ── 드래그 공통 처리 함수 ──
-  function onDragMove(clientX, clientY) {
-    if (!dragging) return;
-    const g = workGraph[currentFloor];
-    if (!g||!g.nodes[dragging]) return;
-    // dragOff 보정 후 퍼센트 계산
-    const {x:xP, y:yP} = canvasToPct(clientX - dragOffX, clientY - dragOffY);
-    g.nodes[dragging].x = xP;
-    g.nodes[dragging].y = yP;
-    coordLabel.textContent = `x:${xP} y:${yP}`;
-    selLabel.textContent = `${dragging} (${xP}, ${yP})`;
-    renderAll();
-    autoSaveLocal();
-  }
-
-  // 마우스 드래그
-  document.addEventListener('mousemove', e => onDragMove(e.clientX, e.clientY));
-  document.addEventListener('mouseup', () => { dragging = null; });
-
-  // 터치 드래그 (모바일)
-  document.addEventListener('touchmove', e => {
-    if (!dragging) return;
-    e.preventDefault();
-    const t = e.touches[0];
-    onDragMove(t.clientX, t.clientY);
-  }, {passive: false});
-  document.addEventListener('touchend', () => { dragging = null; });
-  document.addEventListener('touchcancel', () => { dragging = null; });
-
-  // 클릭으로 노드 추가
-  function addNodeAt(clientX, clientY) {
-    const {x:xP, y:yP} = canvasToPct(clientX, clientY);
-    const g = workGraph[currentFloor];
-    const newId = prompt(`새 노드 ID:\n좌표: x=${xP}, y=${yP}`);
-    if (!newId?.trim()) return;
-    if (g.nodes[newId.trim()]) { alert('이미 존재하는 ID입니다.'); return; }
-    g.nodes[newId.trim()] = {x:xP, y:yP};
-    autoSaveLocal(); renderAll();
-  }
-  canvas.addEventListener('click', e => {
-    if (mode !== 'addNode') return;
-    if (e.target.classList.contains('ed-node')) return;
-    addNodeAt(e.clientX, e.clientY);
-  });
-  canvas.addEventListener('touchend', e => {
-    if (mode !== 'addNode') return;
-    if (e.target.classList.contains('ed-node')) return;
-    if (dragging) return;
-    e.preventDefault();
-    const t = e.changedTouches[0];
-    addNodeAt(t.clientX, t.clientY);
-  }, {passive: false});
-
-  function addEdge(a, b) {
-    const g = workGraph[currentFloor];
-    if (g.edges.some(([x,y])=>(x===a&&y===b)||(x===b&&y===a))) { alert('이미 연결된 엣지입니다.'); return; }
-    // 대각선 경고: x와 y가 모두 다르면 벽 관통 가능성 높음
-    const na = g.nodes[a], nb = g.nodes[b];
-    if (na && nb) {
-      const dx = Math.abs(na.x - nb.x), dy = Math.abs(na.y - nb.y);
-      if (dx > 2 && dy > 2) {
-        const ok = confirm(
-          `⚠️ 대각선 엣지 경고
-` +
-          `${a}(${na.x},${na.y}) ↔ ${b}(${nb.x},${nb.y})
-` +
-          `x차이=${dx.toFixed(1)}, y차이=${dy.toFixed(1)}
-
-` +
-          `이 엣지는 대각선으로 그려져 벽을 관통할 수 있어요.
-` +
-          `수평/수직 엣지만 사용을 권장합니다.
-
-` +
-          `그래도 추가하시겠습니까?`
-        );
-        if (!ok) return;
-      }
-    }
-    g.edges.push([a, b]);
-    statusMsg.textContent = `엣지 추가됨: ${a} ↔ ${b}`;
-    autoSaveLocal();
-    renderAll();
-  }
-
-  function deleteNode(id) {
-    if (!confirm(`"${id}" 노드를 삭제하시겠습니까?`)) return;
-    const g = workGraph[currentFloor];
-    delete g.nodes[id];
-    g.edges = g.edges.filter(([a,b])=>a!==id&&b!==id);
-    selectedNode = null;
-    autoSaveLocal();
-    renderAll();
-  }
-
-  // ── 자동 저장 (localStorage) ──
-  function autoSaveLocal() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(workGraph));
-      saveStatus.textContent = '💾 자동저장됨';
-      setTimeout(()=>saveStatus.textContent='', 2000);
-    } catch(e) {}
-  }
-
-  // ── 코드 생성 ──
-  function buildCode() {
-    let code = 'const corridorGraph = {\n\n';
-    Object.entries(workGraph).forEach(([floor, g]) => {
-      code += `  '${floor}': {\n    nodes: {\n`;
-      Object.entries(g.nodes).forEach(([id, n]) => {
-        code += `      ${id}:{x:${n.x},y:${n.y}},\n`;
-      });
-      code += `    },\n    edges:[\n`;
-      (g.edges||[]).forEach(([a,b]) => { code += `      ['${a}','${b}'],\n`; });
-      code += `    ]\n  },\n\n`;
-    });
-    return code + '};\n';
-  }
-
-  function exportCode() {
-    document.getElementById('edExportText').value = buildCode();
-    exportBox.style.display = 'block';
-    overlay.style.display = 'block';
-  }
-
-  // ── 불러오기 ──
-  function importCode() {
-    const raw = document.getElementById('edImportText').value.trim();
-    if (!raw) { alert('코드를 붙여넣어 주세요.'); return; }
-    try {
-      // 안전하게 corridorGraph 객체 추출
-      const match = raw.match(/const corridorGraph\s*=\s*(\{[\s\S]*\})\s*;?/);
-      if (!match) throw new Error('corridorGraph 형식이 아닙니다.');
-      const fn = new Function('return ' + match[1]);
-      const imported = fn();
-      workGraph = imported;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(workGraph));
-      // 드롭다운 업데이트
-      floorSel.innerHTML = '';
-      Object.keys(workGraph).forEach(f => {
-        const opt = document.createElement('option'); opt.value=f; opt.textContent=f;
-        floorSel.appendChild(opt);
-      });
-      currentFloor = Object.keys(workGraph)[0];
-      importBox.style.display = 'none';
-      overlay.style.display  = 'none';
-      document.getElementById('edImportText').value = '';
-      loadFloor(currentFloor);
-      saveStatus.textContent = '✅ 불러오기 완료!';
-      setTimeout(()=>saveStatus.textContent='', 3000);
-    } catch(e) {
-      alert('코드 파싱 오류:\n' + e.message);
-    }
-  }
-
-  // ── 경로 미리보기 ──
-  function runPreview() {
-    const fromVal = document.getElementById('edPreviewFrom').value.trim();
-    const toVal   = document.getElementById('edPreviewTo').value.trim();
-    const result  = document.getElementById('edPreviewResult');
-
-    const fromKey = resolveKey(fromVal);
-    const toKey   = resolveKey(toVal);
-    if (!fromKey && fromVal) { result.textContent = `⚠️ "${fromVal}" 을 찾을 수 없어요.`; return; }
-    if (!toKey)   { result.textContent = `⚠️ "${toVal}" 을 찾을 수 없어요.`; return; }
-
-    const src = fromKey ? positions[fromKey] : null;
-    const dst = positions[toKey];
-    const srcFloor = src ? src.floor : null;
-    const dstFloor = dst.floor;
-
-    let info = `출발: ${fromKey||'(없음)'} — ${srcFloor||'-'}\n도착: ${toKey} — ${dstFloor}\n`;
-
-    // 현재 층이 관련 층이면 바로 경로 그리기
-    const floorToShow = srcFloor || dstFloor;
-    if (floorSel.value !== floorToShow) {
-      floorSel.value = floorToShow;
-      loadFloor(floorToShow);
-    }
-
-    const g = workGraph[floorToShow];
-    if (!g) { result.textContent = info + `\n❌ ${floorToShow} 그래프 없음`; return; }
-
-    const fromPct = src
-      ? {x:parseFloat(src.left),   y:parseFloat(src.top)}
-      : {x:parseFloat(dst.left),   y:parseFloat(dst.top)};
-    const toPct   = {x:parseFloat(dst.left), y:parseFloat(dst.top)};
-
-    const sId = nearestNode(g.nodes, fromPct.x, fromPct.y);
-    const eId = nearestNode(g.nodes, toPct.x,   toPct.y);
-    info += `\n가장 가까운 노드: 출발=${sId}, 도착=${eId}\n`;
-
-    const ids = dijkstra(g.nodes, g.edges, sId, eId);
-    if (!ids) { result.textContent = info + '\n❌ 경로를 찾을 수 없어요.'; renderAll(); return; }
-
-    const pts = simplifyPath(ids.map(id=>({x:g.nodes[id].x, y:g.nodes[id].y})));
-    info += `경로 노드: ${ids.join(' → ')}\n(${pts.length}개 점으로 단순화)`;
-    result.textContent = info;
-
-    renderAll(pts);
-  }
-
-  // ── 이벤트 바인딩 ──
-  floorSel.addEventListener('change', () => loadFloor(floorSel.value));
-  document.getElementById('edAddNode').addEventListener('click', () => setMode('addNode','＋ 노드 추가'));
-  document.getElementById('edAddEdge').addEventListener('click', () => setMode('addEdge','🔗 엣지 연결'));
-  document.getElementById('edDelNode').addEventListener('click', () => setMode('delNode','🗑 노드 삭제'));
-  document.getElementById('edSave').addEventListener('click', exportCode);
-
-  document.getElementById('edImport').addEventListener('click', () => {
-    importBox.style.display='block'; overlay.style.display='block';
-  });
-  document.getElementById('edPreview').addEventListener('click', () => {
-    const panel = document.getElementById('edPreviewPanel');
-    const isActive = panel.classList.contains('active');
-    panel.classList.toggle('active');
-    // 패널 열릴 때 입력 포커스
-    if (!isActive) {
-      setTimeout(()=>document.getElementById('edPreviewFrom').focus(), 50);
-    }
-  });
-
-  document.getElementById('edClose').addEventListener('click', () => {
-    if (confirm('에디터를 닫겠습니까?')) location.href = location.pathname;
-  });
-
-  // 내보내기 팝업
-  document.getElementById('edCopyBtn').addEventListener('click', () => {
-    const txt = document.getElementById('edExportText').value;
-    navigator.clipboard.writeText(txt)
-      .then(()=>alert('✅ 클립보드에 복사되었습니다!'))
-      .catch(()=>{ document.getElementById('edExportText').select(); document.execCommand('copy'); alert('✅ 복사됨!'); });
-  });
-  document.getElementById('edSaveLocal').addEventListener('click', () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(workGraph));
-    alert('✅ 브라우저에 저장되었습니다!\n다음에 에디터를 열 때 자동으로 불러와요.');
-  });
-  document.getElementById('edExportClose').addEventListener('click', () => {
-    exportBox.style.display='none'; overlay.style.display='none';
-  });
-
-  // 불러오기 팝업
-  document.getElementById('edImportApply').addEventListener('click', importCode);
-  document.getElementById('edImportClose').addEventListener('click', () => {
-    importBox.style.display='none'; overlay.style.display='none';
-  });
-
-  // 미리보기 팝업
-  document.getElementById('edPreviewRun').addEventListener('click', runPreview);
-  document.getElementById('edPreviewClose').addEventListener('click', () => {
-    document.getElementById('edPreviewPanel').classList.remove('active');
-    renderAll();
-  });
-  document.getElementById('edPreviewFrom').addEventListener('keydown', e => { if(e.key==='Enter') runPreview(); });
-  document.getElementById('edPreviewTo').addEventListener('keydown',   e => { if(e.key==='Enter') runPreview(); });
-
-  overlay.addEventListener('click', e => {
-    if (e.target===overlay) {
-      exportBox.style.display='none';
-      importBox.style.display='none';
-      overlay.style.display='none';
-      renderAll();
-    }
-  });
-
-  // 리사이즈 대응
-  // ── 화면 크기/회전 대응: 레이아웃 완료 후 재렌더 ──
-  let resizeTimer = null;
-  function deferredRender() {
-    if (resizeTimer) clearTimeout(resizeTimer);
-    // 브라우저 레이아웃 재계산이 끝날 때까지 대기 후 렌더
-    resizeTimer = setTimeout(() => {
-      renderAll();
-      resizeTimer = null;
-    }, 150);
-  }
-
-  window.addEventListener('resize', deferredRender);
-
-  // 모바일 가로/세로 회전: orientationchange 후 레이아웃까지 시간이 더 걸림
-  window.addEventListener('orientationchange', () => {
-    if (resizeTimer) clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
-      renderAll();
-      // 한 번 더 확인 (일부 기기      // 한 번 더 확인 (일부 기기는 500ms 후에야 완료)
-      setTimeout(renderAll, 400);
-      resizeTimer = null;
-    }, 100);
-  });
-
-  mapImg.addEventListener('load', () => renderAll());
-});
-})();
-</script>
+})();</script>
 </body>
 </html>
