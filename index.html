@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v62</title>
+<title>강릉아산병원 안내지도 v63</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
@@ -1799,6 +1799,8 @@ function navigateRoute(){
   renderSteps(steps);
   triggerFadeIn(mapsContainer);
   scrollToMap();
+  // 경로 안내 시 출발지+도착지 시트에 기록
+  recordQRScan(sVal||'(직접입력)', eVal);
 }
 
 /* ── 팝업 ── */
@@ -2040,7 +2042,7 @@ function getLocalStats(){
   const params=new URLSearchParams(location.search);
   const from=params.get('from'), to=params.get('to');
   if(!from&&!to) return;
-  if(from) recordQRScan(from, to||'');
+  if(from && !to) recordQRScan(from, '');  // 도착지 없을 때만 즉시 기록, 있으면 navigateRoute에서 기록
   function applyParams(){
     if(from){
       const key=resolveKey(from)||from;
