@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v64</title>
+<title>강릉아산병원 안내지도 v65</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
@@ -2577,6 +2577,308 @@ function showQRBanner(fromLabel,toLabel){
     `<div style="border-top:2px solid #e0f2f1;margin-top:14px;padding-top:12px;display:flex;justify-content:space-between;font-size:16px;font-weight:900;color:#1a2e25;">
       <span>📱 총 QR 스캔 수</span><span style="color:#009688;">${total}회</span></div>`;
   };
-})();</script>
+})();
+
+/* ════════════════════════════════════════
+   복도 에디터 (?edit)
+   접속: gnahmap.netlify.app?edit
+   비밀번호: gnah2025
+════════════════════════════════════════ */
+(function initEditor(){
+  if(!location.search.includes('edit')) return;
+  if(prompt('에디터 비밀번호:')!=='gnah2025'){alert('비밀번호 오류');return;}
+
+  /* ── 에디터 CSS ── */
+  const style=document.createElement('style');
+  style.textContent=`
+    #corridorEditor{position:fixed;inset:0;z-index:9000;background:#1a1a2e;
+      display:flex;flex-direction:column;font-family:'Noto Sans KR',sans-serif;overflow:hidden;}
+    #edToolbar{background:#009688;color:#fff;padding:10px 14px;display:flex;
+      align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;
+      box-shadow:0 2px 8px rgba(0,0,0,.3);}
+    #edToolbar h2{font-size:15px;font-weight:900;margin-right:4px;}
+    .ed-btn{padding:7px 12px;border:none;border-radius:8px;cursor:pointer;
+      font-size:12px;font-weight:800;font-family:'Noto Sans KR',sans-serif;}
+    .ed-btn.mint{background:#e0f2f1;color:#004d40;}
+    .ed-btn.orange{background:#e8620a;color:#fff;}
+    .ed-btn.gray{background:rgba(255,255,255,.2);color:#fff;}
+    .ed-btn.red{background:#c62828;color:#fff;}
+    .ed-btn.active{background:#ffeb3b;color:#000;}
+    #edFloorSel{padding:7px 10px;border:none;border-radius:8px;
+      font-size:12px;font-weight:700;font-family:'Noto Sans KR',sans-serif;background:#fff;}
+    #edBody{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+    #edMapWrap{position:relative;flex:1;overflow:hidden;background:#111;}
+    #edMapImg{display:block;width:100%;height:100%;object-fit:contain;
+      user-select:none;-webkit-user-select:none;}
+    #edSvg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;
+      pointer-events:none;}
+    .ed-edge{stroke:#4fc3f7;stroke-width:2;cursor:pointer;pointer-events:stroke;}
+    .ed-edge:hover{stroke:#ff8a65;stroke-width:3;}
+    .ed-node{fill:#ffeb3b;stroke:#fff;stroke-width:2;cursor:grab;pointer-events:all;}
+    .ed-node:hover{fill:#ff8a65;}
+    .ed-node.selected{fill:#ff5722;stroke:#fff;stroke-width:3;}
+    .ed-node-label{fill:#fff;font-size:9px;font-weight:700;pointer-events:none;
+      text-anchor:middle;dominant-baseline:central;}
+    #edPreviewPath{fill:none;stroke:#ff8a65;stroke-width:3;
+      stroke-dasharray:8,4;pointer-events:none;opacity:.85;}
+    #edStatus{background:#0d0d1a;color:#4fc3f7;padding:6px 14px;
+      font-size:11px;font-weight:700;flex-shrink:0;}
+    #edPreviewBar{background:#1a1a2e;padding:8px 14px;display:flex;
+      gap:8px;align-items:center;flex-shrink:0;border-top:1px solid #333;}
+    #edPreviewBar input{padding:6px 10px;border:1px solid #444;border-radius:6px;
+      background:#2a2a3e;color:#fff;font-size:12px;font-family:'Noto Sans KR',sans-serif;
+      width:150px;}
+    #edPreviewBar label{color:#aaa;font-size:12px;font-weight:700;}
+  `;
+  document.head.appendChild(style);
+
+  /* ── 에디터 HTML ── */
+  const div=document.createElement('div');
+  div.id='corridorEditor';
+  div.innerHTML=`
+    <div id="edToolbar">
+      <h2>🗺 복도 에디터</h2>
+      <select id="edFloorSel"></select>
+      <button class="ed-btn mint" id="edAddNode">➕ 노드</button>
+      <button class="ed-btn mint" id="edAddEdge">🔗 엣지모드</button>
+      <button class="ed-btn orange" id="edExport">💾 내보내기</button>
+      <button class="ed-btn gray" id="edImport">📥 불러오기</button>
+      <button class="ed-btn red" id="edClose">✕ 닫기</button>
+    </div>
+    <div id="edBody">
+      <div id="edMapWrap">
+        <img id="edMapImg">
+        <svg id="edSvg"><path id="edPreviewPath" d=""/></svg>
+      </div>
+      <div id="edPreviewBar">
+        <label>경로 미리보기:</label>
+        <input id="edFromInput" placeholder="출발지 (예: 신경과)">
+        <input id="edToInput"   placeholder="도착지 (예: ct실)">
+        <button class="ed-btn mint" id="edPreviewBtn">🔍 확인</button>
+        <button class="ed-btn gray" id="edClearPreview">지우기</button>
+      </div>
+      <div id="edStatus">층을 선택하세요</div>
+    </div>
+  `;
+  document.body.appendChild(div);
+
+  /* ── 상태 ── */
+  const LS_KEY='gnah_corridorGraph_v1';
+  let graph=JSON.parse(JSON.stringify(corridorGraph)); // 깊은 복사
+  // localStorage에 저장된 값 우선 적용
+  try{const saved=localStorage.getItem(LS_KEY);if(saved)graph=JSON.parse(saved);}catch(e){}
+
+  let currentFloor=Object.keys(maps)[0];
+  let edgeMode=false;
+  let edgeStart=null;
+  let selectedNode=null;
+  let dragging=null, dragOffX=0, dragOffY=0;
+
+  const mapImg=document.getElementById('edMapImg');
+  const svg=document.getElementById('edSvg');
+  const statusEl=document.getElementById('edStatus');
+  const floorSel=document.getElementById('edFloorSel');
+
+  /* ── 층 선택 목록 ── */
+  Object.keys(maps).forEach(f=>{
+    const opt=document.createElement('option');
+    opt.value=f; opt.textContent=f;
+    floorSel.appendChild(opt);
+  });
+  floorSel.onchange=()=>{currentFloor=floorSel.value;edgeMode=false;edgeStart=null;selectedNode=null;render();};
+
+  /* ── 렌더 ── */
+  function imgCoord(px,py){
+    // % → SVG px 좌표
+    const r=mapImg.getBoundingClientRect();
+    return {x:px/100*r.width, y:py/100*r.height};
+  }
+  function svgToPercent(sx,sy){
+    const r=mapImg.getBoundingClientRect();
+    return {x:(sx/r.width*100), y:(sy/r.height*100)};
+  }
+
+  function render(){
+    mapImg.src=maps[currentFloor]||'';
+    const g=graph[currentFloor];
+    // svg 내용 초기화 (previewPath 제외)
+    [...svg.querySelectorAll('.ed-edge,.ed-node,.ed-node-label')].forEach(el=>el.remove());
+
+    if(!g) return;
+    const nodes=g.nodes||{};
+    const edges=g.edges||[];
+
+    // 엣지
+    edges.forEach((e,i)=>{
+      const a=nodes[e[0]], b=nodes[e[1]];
+      if(!a||!b) return;
+      const ca=imgCoord(a.x,a.y), cb=imgCoord(b.x,b.y);
+      const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1',ca.x); line.setAttribute('y1',ca.y);
+      line.setAttribute('x2',cb.x); line.setAttribute('y2',cb.y);
+      line.className.baseVal='ed-edge';
+      line.dataset.idx=i;
+      line.title=`${e[0]}-${e[1]}`;
+      line.addEventListener('dblclick',()=>{
+        if(confirm(`엣지 ${e[0]}↔${e[1]} 삭제?`)){
+          g.edges.splice(i,1); saveGraph(); render();
+        }
+      });
+      svg.insertBefore(line, svg.querySelector('#edPreviewPath'));
+    });
+
+    // 노드
+    Object.entries(nodes).forEach(([id,n])=>{
+      const c=imgCoord(n.x,n.y);
+      const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      circle.setAttribute('cx',c.x); circle.setAttribute('cy',c.y); circle.setAttribute('r',9);
+      circle.className.baseVal='ed-node'+(selectedNode===id?' selected':'');
+      circle.dataset.id=id;
+
+      // 드래그
+      circle.addEventListener('pointerdown',ev=>{
+        if(edgeMode){
+          // 엣지 모드: 첫번째 노드 선택 or 두번째 노드로 엣지 연결
+          if(!edgeStart){
+            edgeStart=id; selectedNode=id;
+            setStatus(`엣지 시작: ${id} → 두번째 노드 클릭`);
+          } else if(edgeStart!==id){
+            // 중복 체크
+            const exists=g.edges.some(e=>(e[0]===edgeStart&&e[1]===id)||(e[0]===id&&e[1]===edgeStart));
+            if(!exists){ g.edges.push([edgeStart,id]); saveGraph(); }
+            edgeStart=null; selectedNode=null;
+            setStatus(`엣지 연결 완료`); render();
+          }
+          ev.stopPropagation(); return;
+        }
+        // 드래그 시작
+        dragging=id; selectedNode=id;
+        const r=mapImg.getBoundingClientRect();
+        dragOffX=ev.clientX-r.left; dragOffY=ev.clientY-r.top;
+        ev.preventDefault();
+      });
+
+      const label=document.createElementNS('http://www.w3.org/2000/svg','text');
+      label.setAttribute('x',c.x); label.setAttribute('y',c.y);
+      label.className.baseVal='ed-node-label';
+      label.textContent=id;
+
+      svg.appendChild(circle);
+      svg.appendChild(label);
+    });
+    setStatus(`${currentFloor} | 노드:${Object.keys(nodes).length} 엣지:${edges.length}${edgeMode?' | 🔗 엣지모드':''}`);
+  }
+
+  /* ── 드래그 ── */
+  svg.addEventListener('pointermove',ev=>{
+    if(!dragging) return;
+    const r=mapImg.getBoundingClientRect();
+    const px=(ev.clientX-r.left)/r.width*100;
+    const py=(ev.clientY-r.top)/r.height*100;
+    const g=graph[currentFloor];
+    if(g&&g.nodes[dragging]){
+      g.nodes[dragging].x=Math.max(0,Math.min(100,parseFloat(px.toFixed(1))));
+      g.nodes[dragging].y=Math.max(0,Math.min(100,parseFloat(py.toFixed(1))));
+      render();
+    }
+  });
+  svg.addEventListener('pointerup',()=>{
+    if(dragging){saveGraph();dragging=null;}
+  });
+
+  /* ── 지도 클릭 → 노드 추가 ── */
+  let addNodeMode=false;
+  document.getElementById('edAddNode').onclick=()=>{
+    addNodeMode=!addNodeMode;
+    document.getElementById('edAddNode').classList.toggle('active',addNodeMode);
+    setStatus(addNodeMode?'지도를 클릭해서 노드 추가':'노드 추가 취소');
+  };
+  mapImg.addEventListener('click',ev=>{
+    if(!addNodeMode) return;
+    const r=mapImg.getBoundingClientRect();
+    const px=((ev.clientX-r.left)/r.width*100).toFixed(1);
+    const py=((ev.clientY-r.top)/r.height*100).toFixed(1);
+    const id=prompt(`노드 ID 입력 (현재 좌표: ${px}%, ${py}%)`);
+    if(!id) return;
+    if(!graph[currentFloor]) graph[currentFloor]={nodes:{},edges:[]};
+    graph[currentFloor].nodes[id]={x:parseFloat(px),y:parseFloat(py)};
+    saveGraph(); render();
+    addNodeMode=false;
+    document.getElementById('edAddNode').classList.remove('active');
+  });
+
+  /* ── 엣지 모드 ── */
+  document.getElementById('edAddEdge').onclick=()=>{
+    edgeMode=!edgeMode; edgeStart=null;
+    document.getElementById('edAddEdge').classList.toggle('active',edgeMode);
+    setStatus(edgeMode?'엣지모드: 첫번째 노드 클릭':'엣지모드 종료');
+    render();
+  };
+
+  /* ── 내보내기 ── */
+  document.getElementById('edExport').onclick=()=>{
+    const code=JSON.stringify(graph,null,2);
+    navigator.clipboard.writeText(code).then(()=>alert('클립보드에 복사됐어요!\n코드에 붙여넣으세요.'))
+      .catch(()=>{const ta=document.createElement('textarea');ta.value=code;
+        document.body.appendChild(ta);ta.select();document.execCommand('copy');
+        document.body.removeChild(ta);alert('복사됐어요!');});
+  };
+
+  /* ── 불러오기 ── */
+  document.getElementById('edImport').onclick=()=>{
+    const code=prompt('내보낸 JSON 코드를 붙여넣으세요:');
+    if(!code) return;
+    try{
+      graph=JSON.parse(code);
+      saveGraph(); render();
+      alert('불러오기 완료!');
+    }catch(e){alert('JSON 형식 오류: '+e.message);}
+  };
+
+  /* ── 경로 미리보기 ── */
+  document.getElementById('edPreviewBtn').onclick=()=>{
+    const fromVal=document.getElementById('edFromInput').value.trim();
+    const toVal=document.getElementById('edToInput').value.trim();
+    const fromKey=resolveKey(fromVal)||fromVal;
+    const toKey=resolveKey(toVal)||toVal;
+    const src=positions[fromKey], dst=positions[toKey];
+    if(!src||!dst){alert('장소를 찾을 수 없어요.');return;}
+    if(src.floor!==currentFloor&&dst.floor!==currentFloor){
+      alert('현재 층과 관련 없는 경로예요.');return;}
+    const g=graph[currentFloor];
+    if(!g){alert('현재 층에 그래프 없음');return;}
+    const sId=nearestNode(g.nodes,parseFloat(src.left),parseFloat(src.top));
+    const eId=nearestNode(g.nodes,parseFloat(dst.left),parseFloat(dst.top));
+    const ids=dijkstra(g.nodes,g.edges,sId,eId);
+    if(!ids){alert('경로 없음');return;}
+    const pts=ids.map(id=>{const c=imgCoord(g.nodes[id].x,g.nodes[id].y);return `${c.x},${c.y}`;});
+    document.getElementById('edPreviewPath').setAttribute('d','M '+pts.join(' L '));
+    setStatus(`경로: ${ids.join('→')}`);
+  };
+  document.getElementById('edClearPreview').onclick=()=>{
+    document.getElementById('edPreviewPath').setAttribute('d','');
+  };
+
+  /* ── 닫기 ── */
+  document.getElementById('edClose').onclick=()=>{
+    // 변경사항 corridorGraph에 반영
+    Object.assign(corridorGraph,graph);
+    div.remove();
+    alert('에디터 종료. 변경사항이 적용됐어요.\n내보내기로 코드에 저장하세요.');
+  };
+
+  /* ── 유틸 ── */
+  function saveGraph(){
+    Object.assign(corridorGraph,graph);
+    try{localStorage.setItem(LS_KEY,JSON.stringify(graph));}catch(e){}
+  }
+  function setStatus(msg){statusEl.textContent=msg;}
+
+  // 이미지 로드 후 렌더
+  mapImg.onload=()=>render();
+  mapImg.src=maps[currentFloor];
+  floorSel.value=currentFloor;
+})();
+</script>
 </body>
 </html>
