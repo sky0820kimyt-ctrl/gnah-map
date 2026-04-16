@@ -2020,18 +2020,13 @@ function recordQRScan(place, dest){
     localStorage.setItem(QR_STATS_KEY, JSON.stringify(s));
   }catch(e){}
 
-  // Google Sheets 기록 (text/plain → no-cors 차단 없음)
+  // Google Sheets 기록 (GET 방식 — CORS 문제 없음)
   try{
-    const payload = JSON.stringify({
-      place: place,
-      dest:  dest||'',
-      time:  new Date().toLocaleString('ko-KR')
-    });
-    fetch('https://script.google.com/macros/s/AKfycby5J4Vbnwig70cYkKF6ArLpfeB57C1twc6RDMKbVMc-lnvbVSKfrcBtAipqxjfbBvC-Yw/exec', {
-      method:'POST', mode:'no-cors',
-      headers:{'Content-Type':'text/plain'},
-      body: payload
-    }).catch(()=>{});
+    const url = 'https://script.google.com/macros/s/AKfycbxfHvhhl_YKcSCc4-z7PwHnZTao88nt-62g9Oi0n1Djs4xxhCbyDD6O7xAOgR2DVKQFwg/exec'
+      + '?place=' + encodeURIComponent(place)
+      + '&dest='  + encodeURIComponent(dest||'')
+      + '&time='  + encodeURIComponent(new Date().toLocaleString('ko-KR'));
+    fetch(url, {mode:'no-cors'}).catch(()=>{});
   }catch(e){}
 }
 
