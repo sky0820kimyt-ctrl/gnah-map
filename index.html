@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v63</title>
+<title>강릉아산병원 안내지도 v64</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
@@ -185,7 +185,8 @@
   .step-block.active-step { display:block; }
   .step-block.always-show { display:block; }
 
-  /* ── Layer Sliding 애니메이션 ── */
+  /* ── 슬라이딩 애니메이션 ── */
+  /* 세로: 층 이동 */
   @keyframes slideInFromTop{
     from{opacity:0;transform:translateY(-60px);}
     to  {opacity:1;transform:translateY(0);}
@@ -196,6 +197,32 @@
   }
   .slide-in-top    { animation:slideInFromTop    .38s cubic-bezier(.22,.61,.36,1) both; }
   .slide-in-bottom { animation:slideInFromBottom .38s cubic-bezier(.22,.61,.36,1) both; }
+
+  /* 가로: 같은 층 이동 */
+  @keyframes slideInFromRight{
+    from{opacity:0;transform:translateX(80px);}
+    to  {opacity:1;transform:translateX(0);}
+  }
+  @keyframes slideInFromLeft{
+    from{opacity:0;transform:translateX(-80px);}
+    to  {opacity:1;transform:translateX(0);}
+  }
+  /* 나가는 블록도 반대 방향으로 슬라이드아웃 */
+  @keyframes slideOutToLeft{
+    from{opacity:1;transform:translateX(0);}
+    to  {opacity:0;transform:translateX(-80px);}
+  }
+  @keyframes slideOutToRight{
+    from{opacity:1;transform:translateX(0);}
+    to  {opacity:0;transform:translateX(80px);}
+  }
+  .slide-in-right  { animation:slideInFromRight .34s cubic-bezier(.22,.61,.36,1) both; }
+  .slide-in-left   { animation:slideInFromLeft  .34s cubic-bezier(.22,.61,.36,1) both; }
+  .slide-out-left  { animation:slideOutToLeft   .28s cubic-bezier(.55,0,1,.45) both; }
+  .slide-out-right { animation:slideOutToRight  .28s cubic-bezier(.55,0,1,.45) both; }
+
+  /* 가로 슬라이드 시 overflow 처리 */
+  #mapsContainer { overflow:hidden; }
 
   /* ── 아이소메트릭 전환 오버레이 ── */
   #isoOverlay {
@@ -1230,16 +1257,38 @@ function goToStep(idx, total){
   const nextFloor=nextBlock.dataset.floor||'';
   const floorChanged = prevFloor && nextFloor && prevFloor!==nextFloor;
   const goingUp = floorNum(nextFloor) > floorNum(prevFloor);
-  const slideClass = goingUp ? 'slide-in-top' : 'slide-in-bottom';
+  const goingForward = idx > prevIdx;
+
+  // 층 이동: 위아래 / 같은 층: 좌우
+  const inClass  = floorChanged
+    ? (goingUp ? 'slide-in-top'   : 'slide-in-bottom')
+    : (goingForward ? 'slide-in-right' : 'slide-in-left');
+  const outClass = floorChanged
+    ? null
+    : (goingForward ? 'slide-out-left' : 'slide-out-right');
+
+  const ALL_SLIDE = ['slide-in-top','slide-in-bottom','slide-in-right','slide-in-left','slide-out-left','slide-out-right'];
 
   function applyTransition(){
-    if(prevBlock && prevIdx!==idx) prevBlock.classList.remove('active-step');
+    // 이전 블록: 같은 층이면 반대 방향으로 슬라이드아웃
+    if(prevBlock && prevIdx!==idx){
+      if(outClass){
+        prevBlock.classList.remove(...ALL_SLIDE);
+        void prevBlock.offsetWidth;
+        prevBlock.classList.add(outClass);
+        prevBlock.addEventListener('animationend',()=>{
+          prevBlock.classList.remove('active-step',...ALL_SLIDE);
+        },{once:true});
+      } else {
+        prevBlock.classList.remove('active-step');
+      }
+    }
 
-    nextBlock.classList.remove('slide-in-top','slide-in-bottom');
+    nextBlock.classList.remove(...ALL_SLIDE);
     void nextBlock.offsetWidth;
-    nextBlock.classList.add('active-step', slideClass);
+    nextBlock.classList.add('active-step', inClass);
     nextBlock.addEventListener('animationend',()=>{
-      nextBlock.classList.remove('slide-in-top','slide-in-bottom');
+      nextBlock.classList.remove(...ALL_SLIDE);
     },{once:true});
 
     currentStepIndex=idx;
