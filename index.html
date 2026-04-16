@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강릉아산병원 안내지도 v61</title>
+<title>강릉아산병원 안내지도 v62</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="https://i0.wp.com/i.ibb.co/99nBTF5r/1.png">
@@ -2020,16 +2020,17 @@ function recordQRScan(place, dest){
     localStorage.setItem(QR_STATS_KEY, JSON.stringify(s));
   }catch(e){}
 
-  // Google Sheets 기록 (모든 기기 스캔 → 시트에 행 추가)
+  // Google Sheets 기록 (text/plain → no-cors 차단 없음)
   try{
+    const payload = JSON.stringify({
+      place: place,
+      dest:  dest||'',
+      time:  new Date().toLocaleString('ko-KR')
+    });
     fetch('https://script.google.com/macros/s/AKfycby5J4Vbnwig70cYkKF6ArLpfeB57C1twc6RDMKbVMc-lnvbVSKfrcBtAipqxjfbBvC-Yw/exec', {
       method:'POST', mode:'no-cors',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        place: place,
-        dest:  dest||'',
-        time:  new Date().toLocaleString('ko-KR')
-      })
+      headers:{'Content-Type':'text/plain'},
+      body: payload
     }).catch(()=>{});
   }catch(e){}
 }
